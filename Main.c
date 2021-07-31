@@ -11,6 +11,10 @@
 #include "Main.h"
 //Prototypes in this header
 
+HANDLE g_GameWindow;
+
+BOOL g_GameIsRunning; //g_ for it is a global var
+
 //int main becomes winmain for windows programs, see winmain syntax
 // these int and char* are command line args
 //int main(int argc, char* argv[])
@@ -33,25 +37,54 @@ int WinMain(HINSTANCE Instance, HINSTANCE PrevInstance,
     UNREFERENCED_PARAMETER(CommandLine);
     UNREFERENCED_PARAMETER(CmdShow);
 
-  
+
+    //If 1 instance is already running, exit and error message
+    if (GameIsAlreadyRunning() == TRUE)
+    {
+        MessageBoxA(NULL, "Another instance of this program is already running!", "Error!", MB_ICONEXCLAMATION | MB_OK);
+
+        goto Exit;
+    }
+
+    //If cannot create main window, exit
     if (CreateMainGameWindow() != ERROR_SUCCESS)
     {
         goto Exit;
     }
-   
+
 
     //Message loop to send info to .exe
 
     MSG Message = { 0 }; //a tag message from windows OS
 
-    while (GetMessageA(&Message, NULL, 0, 0) > 0)
-    {
-        TranslateMessage(&Message);
-        //Translate the message from user
-        DispatchMessageA(&Message);
-        //Dispatch message to window instance, looks up what procedure belongs to this class
+    g_GameIsRunning = TRUE;
 
+    //This nested while loop should represent 1 frame
+    while (g_GameIsRunning)
+    {
+        //Look up PeekMessage vs GetMessage
+        while (PeekMessageA(&Message, g_GameWindow, 0, 0, PM_REMOVE))
+        {
+            DispatchMessageA(&Message);
+        }
+
+        ProcessPlayerInput();
+
+        //RenderFrameGraphics();
+
+        Sleep(1); //Temp solution, in order to reach 60fps each frame must complete within 16.66 ms. 
     }
+
+    ////Rudamentary message loop, should nest it done above
+    //while (GetMessageA(&Message, NULL, 0, 0) > 0)
+    //{
+    //    TranslateMessage(&Message);
+    //    //Translate the message from user
+    //    DispatchMessageA(&Message);
+    //    //Dispatch message to window instance, looks up what procedure belongs to this class
+
+    //}
+
 Exit:  //Placeholder
     return 0;
 }
@@ -71,11 +104,17 @@ LRESULT CALLBACK MainWindowProc(_In_ HWND WindowHandle, _In_ UINT Message, _In_ 
 
     LRESULT Result = 0;
 
+
     switch (Message)
     {
+        //CANT CODE WITHIN SWITCHBLOCK THATS NOT IN CASES
         case WM_CLOSE: //Case when we press X button to close, check documentation
         {
-            PostQuitMessage(0); //This makes GetMessageA return 0, hence stop the message loop and program.
+
+            g_GameIsRunning = FALSE;
+
+            PostQuitMessage(0); 
+            //This makes GetMessageA return 0, hence stop the message loop and program.
 
             break;
         }
@@ -113,7 +152,7 @@ LRESULT CALLBACK MainWindowProc(_In_ HWND WindowHandle, _In_ UINT Message, _In_ 
 
     //    default: return DefWindowProc(WindowHandle, Message, WParam, LParam);
     //}
-    return 0;
+    return Result; //This needs to return the defwindowproc, otherwise it forces CreateWindowsExA to return NULL.
 }
 
 DWORD CreateMainGameWindow(void)
@@ -124,7 +163,6 @@ DWORD CreateMainGameWindow(void)
       //Register Window class, and make window
     WNDCLASSEXA WindowClass = { 0 }; //Always try to initialize variables to avoid garbage value
     //Initialising a Struct to all 0's, use = {0}; instead of = 0;
-    HWND WindowHandle = { 0 };
 
     WindowClass.cbSize = sizeof(WNDCLASSEXA); //cbSize is Count in bytes
     //This is the defining size of window, or I could initialize as sizeof()
@@ -159,14 +197,14 @@ DWORD CreateMainGameWindow(void)
         goto Exit;
     }
 
-    WindowHandle = CreateWindowExA(WS_EX_CLIENTEDGE, "GAME_WINDOWCLASS",
-        "LeftNut", //Window title
+    g_GameWindow = CreateWindowExA(WS_EX_CLIENTEDGE, "GAME_WINDOWCLASS",
+        "This is the Title", //Window title
         WS_OVERLAPPEDWINDOW | WS_VISIBLE, //Window Style, WS_Overlapped could be 0
         CW_USEDEFAULT, CW_USEDEFAULT, 240, 120, //Window initialize position&size
         NULL, NULL, GetModuleHandleA(NULL), NULL);
     //Look into CreateWindowExA, used to create every single window in windows
 
-    if (WindowHandle == NULL)
+    if (g_GameWindow == NULL)
     {
         Result = GetLastError();
         MessageBox(NULL, "Window Creation Failed!", "Error!", MB_ICONEXCLAMATION | MB_OK);
@@ -177,4 +215,31 @@ DWORD CreateMainGameWindow(void)
 
 Exit: //Goto placeholder
     return Result;
+}
+
+BOOL GameIsAlreadyRunning(void)
+{
+    HANDLE Mutex = NULL;
+    //Mutex is a piece of memory used to gate access to resources. Serializing access to .exe
+    Mutex = CreateMutexA(NULL,FALSE, GAME_NAME, "_GameMutex");
+
+    //If Mutex has been created, then a file is already running, thus returns gameisrunning to true
+    if (GetLastError() == ERROR_ALREADY_EXISTS)
+    {
+        return TRUE;
+    }
+    else
+    {
+        return FALSE;
+    }
+}
+
+void ProcessPlayerInput() 
+{
+    short EscapeKeyDown = GetAsyncKeyState(VK_ESCAPE);
+
+    if (EscapeKeyDown)
+    {
+        SendMessageA(g_GameWindow, WM_CLOSE, 0, 0);
+    }
 }
