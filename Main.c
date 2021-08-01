@@ -37,7 +37,6 @@ int WinMain(HINSTANCE Instance, HINSTANCE PrevInstance,
     UNREFERENCED_PARAMETER(CommandLine);
     UNREFERENCED_PARAMETER(CmdShow);
 
-
     //If 1 instance is already running, exit and error message
     if (GameIsAlreadyRunning() == TRUE)
     {
@@ -237,9 +236,16 @@ BOOL GameIsAlreadyRunning(void)
 void ProcessPlayerInput() 
 {
     short EscapeKeyDown = GetAsyncKeyState(VK_ESCAPE);
-
-    if (EscapeKeyDown)
+    //This Checks if the player is in focus 
+    if (EscapeKeyDown && (GetForegroundWindow() == (g_GameWindow)))
     {
+        OutputDebugString("In focus");
         SendMessageA(g_GameWindow, WM_CLOSE, 0, 0);
     }
-}
+
+    //Debug Statements to see when window is in focus
+    /*if (GetForegroundWindow() == g_GameWindow)
+        OutputDebugStringA("IN FOCUS\n");
+    else
+        OutputDebugStringA("OUT FOCUS\n");*/
+}   

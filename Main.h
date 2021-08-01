@@ -15,4 +15,4 @@ DWORD CreateMainGameWindow(void);
 BOOL GameIsAlreadyRunning(void);
 
 
-void ProcessPlayerInput(); //can return void because assume it doesnt fail, dont care about error code
+void ProcessPlayerInput(void); //can return void because assume it doesnt fail, dont care about error code
