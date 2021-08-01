@@ -16,7 +16,7 @@ HWND g_GameWindow;
 BOOL g_GameIsRunning; //g_ for it is a global var
 
 //This is our backbuffer, the map upon which other frames are called to
-GAMEBITMAP g_DrawingSurface = { 0 };
+GAMEBITMAP g_BackBuffer = { 0 };
 
 //void* Memory; //64 bits in x64
 
@@ -59,22 +59,22 @@ int WinMain(HINSTANCE Instance, HINSTANCE PrevInstance,
         goto Exit;
     }
 
-    g_DrawingSurface.Bitmapinfo.bmiHeader.biSize = sizeof(g_DrawingSurface.Bitmapinfo.bmiHeader);
+    g_BackBuffer.Bitmapinfo.bmiHeader.biSize = sizeof(g_BackBuffer.Bitmapinfo.bmiHeader);
     
-    g_DrawingSurface.Bitmapinfo.bmiHeader.biWidth = GAME_RES_WIDTH;
+    g_BackBuffer.Bitmapinfo.bmiHeader.biWidth = GAME_RES_WIDTH;
 
-    g_DrawingSurface.Bitmapinfo.bmiHeader.biHeight = GAME_RES_HEIGHT;
+    g_BackBuffer.Bitmapinfo.bmiHeader.biHeight = GAME_RES_HEIGHT;
 
-    g_DrawingSurface.Bitmapinfo.bmiHeader.biBitCount = GAME_BPP;
+    g_BackBuffer.Bitmapinfo.bmiHeader.biBitCount = GAME_BPP;
 
     //This means no compression, expands to 0L
-    g_DrawingSurface.Bitmapinfo.bmiHeader.biCompression = BI_RGB;
+    g_BackBuffer.Bitmapinfo.bmiHeader.biCompression = BI_RGB;
 
-    g_DrawingSurface.Bitmapinfo.bmiHeader.biPlanes = 1;
+    g_BackBuffer.Bitmapinfo.bmiHeader.biPlanes = 1;
 
     //Allocating memory for drawing surface assigned to Memory pointer.
-    g_DrawingSurface.Memory = VirtualAlloc(NULL, GAME_DRAWING_AREA_MEMORY_SIZE, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
-    if (g_DrawingSurface.Memory == NULL)
+    g_BackBuffer.Memory = VirtualAlloc(NULL, GAME_DRAWING_AREA_MEMORY_SIZE, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+    if (g_BackBuffer.Memory == NULL)
     {
         MessageBox(NULL, "Failed to allocate memory for drawing surface!", "Error!", MB_ICONEXCLAMATION | MB_OK);
 
@@ -208,7 +208,7 @@ DWORD CreateMainGameWindow(void)
     WindowClass.hIconSm = LoadIconA(NULL, IDI_APPLICATION);
     //Another GUI icon reference
     WindowClass.hCursor = LoadCursorA(NULL, IDC_ARROW);
-    WindowClass.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+    WindowClass.hbrBackground = CreateSolidBrush(RGB(255,0,255));
     WindowClass.lpszMenuName = NULL;
     WindowClass.lpszClassName = "GAME_WINDOWCLASS";
     //Long pointer to String for class name
@@ -280,5 +280,11 @@ void ProcessPlayerInput()
 
 void RenderFrameGraphics(void)
 {
+    //Get Device Context and remember to release it when finished
+    HDC DeviceContext = GetDC(g_GameWindow);
 
+    //Placing the backbuffer ontop of window with reference to device context and address of backbuffer.
+    StretchDIBits(DeviceContext, 0, 0, 100, 100, 0, 0, 100, 100, g_BackBuffer.Memory, &g_BackBuffer.Bitmapinfo, DIB_RGB_COLORS, SRCCOPY);
+
+    ReleaseDC(g_GameWindow, DeviceContext);
 }
