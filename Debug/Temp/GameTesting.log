@@ -25,8 +25,8 @@ C:\Program Files (x86)\Windows Kits\10\Include\10.0.19041.0\um\winioctl.h(15525,
 C:\Program Files (x86)\Windows Kits\10\Include\10.0.19041.0\um\winioctl.h(15675,22): warning C4668: '_WIN32_WINNT_WIN10_RS4' is not defined as a preprocessor macro, replacing with '0' for '#if/#elif'
 C:\Program Files (x86)\Windows Kits\10\Include\10.0.19041.0\um\winioctl.h(15688,22): warning C4668: '_WIN32_WINNT_WIN10_RS4' is not defined as a preprocessor macro, replacing with '0' for '#if/#elif'
 C:\Program Files (x86)\Windows Kits\10\Include\10.0.19041.0\um\winioctl.h(15916,22): warning C4668: '_WIN32_WINNT_WIN10_RS1' is not defined as a preprocessor macro, replacing with '0' for '#if/#elif'
-C:\Users\aniru\source\repos\GameTesting\Main.h(18,26): warning C4255: 'ProcessPlayerInput': no function prototype given: converting '()' to '(void)'
-C:\Users\aniru\source\repos\GameTesting\Main.c(29,23): warning C4100: 'Instance': unreferenced formal parameter
-C:\Users\aniru\source\repos\GameTesting\Main.c(223,49): warning C4020: 'CreateMutexA': too many actual parameters
-C:\Users\aniru\source\repos\GameTesting\Main.c(237,1): warning C4255: 'ProcessPlayerInput': no function prototype given: converting '()' to '(void)'
+C:\Users\aniru\source\repos\GameTesting\Main.h(35,14): warning C4820: 'GAMEBITMAP': '4' bytes padding added after data member 'Bitmapinfo'
+C:\Users\aniru\source\repos\GameTesting\Main.c(33,23): warning C4100: 'Instance': unreferenced formal parameter
+C:\Users\aniru\source\repos\GameTesting\Main.c(250,49): warning C4020: 'CreateMutexA': too many actual parameters
+C:\Users\aniru\source\repos\GameTesting\Main.c(264,1): warning C4255: 'ProcessPlayerInput': no function prototype given: converting '()' to '(void)'
   GameTesting.vcxproj -> C:\Users\aniru\source\repos\GameTesting\Debug\GameTesting.exe

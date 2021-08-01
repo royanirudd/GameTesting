@@ -11,9 +11,14 @@
 #include "Main.h"
 //Prototypes in this header
 
-HANDLE g_GameWindow;
+HWND g_GameWindow;
 
 BOOL g_GameIsRunning; //g_ for it is a global var
+
+//This is our backbuffer, the map upon which other frames are called to
+GAMEBITMAP g_DrawingSurface = { 0 };
+
+//void* Memory; //64 bits in x64
 
 //int main becomes winmain for windows programs, see winmain syntax
 // these int and char* are command line args
@@ -29,6 +34,9 @@ BOOL g_GameIsRunning; //g_ for it is a global var
 int WinMain(HINSTANCE Instance, HINSTANCE PrevInstance,
     PSTR CommandLine, int CmdShow)
 {
+
+    
+
     //UNREFERENCED_PARAMETER means we know we are not using those arguements
 
     //UNREFERENCED_PARAMETER(Instance); 
@@ -51,7 +59,27 @@ int WinMain(HINSTANCE Instance, HINSTANCE PrevInstance,
         goto Exit;
     }
 
+    g_DrawingSurface.Bitmapinfo.bmiHeader.biSize = sizeof(g_DrawingSurface.Bitmapinfo.bmiHeader);
+    
+    g_DrawingSurface.Bitmapinfo.bmiHeader.biWidth = GAME_RES_WIDTH;
 
+    g_DrawingSurface.Bitmapinfo.bmiHeader.biHeight = GAME_RES_HEIGHT;
+
+    g_DrawingSurface.Bitmapinfo.bmiHeader.biBitCount = GAME_BPP;
+
+    //This means no compression, expands to 0L
+    g_DrawingSurface.Bitmapinfo.bmiHeader.biCompression = BI_RGB;
+
+    g_DrawingSurface.Bitmapinfo.bmiHeader.biPlanes = 1;
+
+    //Allocating memory for drawing surface assigned to Memory pointer.
+    g_DrawingSurface.Memory = VirtualAlloc(NULL, GAME_DRAWING_AREA_MEMORY_SIZE, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+    if (g_DrawingSurface.Memory == NULL)
+    {
+        MessageBox(NULL, "Failed to allocate memory for drawing surface!", "Error!", MB_ICONEXCLAMATION | MB_OK);
+
+        goto Exit;
+    }
     //Message loop to send info to .exe
 
     MSG Message = { 0 }; //a tag message from windows OS
@@ -69,7 +97,7 @@ int WinMain(HINSTANCE Instance, HINSTANCE PrevInstance,
 
         ProcessPlayerInput();
 
-        //RenderFrameGraphics();
+        RenderFrameGraphics();
 
         Sleep(1); //Temp solution, in order to reach 60fps each frame must complete within 16.66 ms. 
     }
@@ -199,7 +227,7 @@ DWORD CreateMainGameWindow(void)
     g_GameWindow = CreateWindowExA(WS_EX_CLIENTEDGE, "GAME_WINDOWCLASS",
         "This is the Title", //Window title
         WS_OVERLAPPEDWINDOW | WS_VISIBLE, //Window Style, WS_Overlapped could be 0
-        CW_USEDEFAULT, CW_USEDEFAULT, 240, 120, //Window initialize position&size
+        CW_USEDEFAULT, CW_USEDEFAULT, 640, 480, //Window initialize position&size
         NULL, NULL, GetModuleHandleA(NULL), NULL);
     //Look into CreateWindowExA, used to create every single window in windows
 
@@ -249,3 +277,8 @@ void ProcessPlayerInput()
     else
         OutputDebugStringA("OUT FOCUS\n");*/
 }   
+
+void RenderFrameGraphics(void)
+{
+
+}
