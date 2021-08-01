@@ -200,7 +200,11 @@ DWORD CreateMainGameWindow(void)
     g_GameWindow = CreateWindowExA(WS_EX_CLIENTEDGE, "GAME_WINDOWCLASS",
         "This is the Title", //Window title
         WS_OVERLAPPEDWINDOW | WS_VISIBLE, //Window Style, WS_Overlapped could be 0
+<<<<<<< Updated upstream
         CW_USEDEFAULT, CW_USEDEFAULT, 240, 120, //Window initialize position&size
+=======
+        CW_USEDEFAULT, CW_USEDEFAULT, GAME_RES_WIDTH, GAME_RES_HEIGHT, //Window initialize position&size
+>>>>>>> Stashed changes
         NULL, NULL, GetModuleHandleA(NULL), NULL);
     //Look into CreateWindowExA, used to create every single window in windows
 
