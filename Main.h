@@ -13,6 +13,7 @@
 //Each frame is going to occupy this much memory
 #define GAME_DRAWING_AREA_MEMORY_SIZE (GAME_RES_WIDTH * GAME_RES_HEIGHT * (GAME_BPP/8))
 
+#define CALCULATE_AVG_FPS_EVERY_X_FRAMES 100
 LRESULT CALLBACK MainWindowProc(_In_ HWND WindowHandle, _In_ UINT Message, _In_ WPARAM WParam, _In_ LPARAM LParam);
 //Prototype for Window Process
 
@@ -27,11 +28,46 @@ void RenderFrameGraphics(void); //Can return void but never fails
 
 void ProcessPlayerInput(void); //can return void because assume it doesnt fail, dont care about error code
 
+#pragma warning(disable: 4668)
+#pragma warning(disable: 4820) //Disabled structure padding warning 
+#pragma warning(disable: 5045) //Disabled warning about Spectre/Meltdown CPU vulnarability
 //Struct for background bitmap
 typedef struct GAMEBITMAP
 {
-	BITMAPINFO Bitmapinfo;
-
-	void* Memory;
-
+	BITMAPINFO Bitmapinfo; //44 bytes
+	//Some 4 bytes padding added by compiler
+	void* Memory; //8 bytes
+					//56 bytes with 4 padding to perfectly allign 
+					//by being factor of 8(void* Memory)
 } GAMEBITMAP;
+
+//Struct for 32bit Pixel, each 8 bit unsigned char for color.
+typedef struct PIXEL32 
+{
+	uint8_t Blue;
+
+	uint8_t Green;
+
+	uint8_t Red;
+
+	uint8_t Alpha;
+
+} PIXEL32;
+
+typedef struct GAME_PERFORMANCE_DATA
+{
+	uint64_t TotalFramesRendered; 
+
+	uint32_t RawFPSAvg;
+
+	uint32_t CookedFramesPerSecondAvg;//We want this close to 60
+
+	int64_t PerformanceFrequency;
+
+	MONITORINFO MonitorInfo;
+
+	int32_t MonitorWidth;
+
+	int32_t MonitorHeight;
+
+}GAME_PERFORMANCE_DATA;

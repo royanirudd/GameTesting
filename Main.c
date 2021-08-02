@@ -3,10 +3,12 @@
 #include <stdio.h>
 //These pragma are directly communicating to compiler
 //Adjusts warning level, make them to 0(or whatever) just for, then include windows.h
-#pragma warning(push, 3)
+#pragma warning(push, 0)
 #include <windows.h>
 #pragma warning(pop)
 //Then after including windows.h, pop previous W3 back to Wall
+
+#include <stdint.h>
 
 #include "Main.h"
 //Prototypes in this header
@@ -17,6 +19,10 @@ BOOL g_GameIsRunning; //g_ for it is a global var
 
 //This is our backbuffer, the map upon which other frames are called to
 GAMEBITMAP g_BackBuffer = { 0 };
+
+GAME_PERFORMANCE_DATA g_PerformanceData;
+//Windows API requires structs to be initilized with size parameter
+
 
 //void* Memory; //64 bits in x64
 
@@ -39,11 +45,19 @@ int WinMain(HINSTANCE Instance, HINSTANCE PrevInstance,
 
     //UNREFERENCED_PARAMETER means we know we are not using those arguements
 
-    //UNREFERENCED_PARAMETER(Instance); 
+    UNREFERENCED_PARAMETER(Instance); 
     //Removed as it is referenced in making of window class
     UNREFERENCED_PARAMETER(PrevInstance);
     UNREFERENCED_PARAMETER(CommandLine);
     UNREFERENCED_PARAMETER(CmdShow);
+
+    int64_t FrameStart = 0;
+
+    int64_t FrameEnd = 0;
+
+    int64_t ElapsedMicroSecondsPerFrame = 0;
+
+    int64_t ElapsedMicroSecondsPerFrameAccumulator = 0;
 
     //If 1 instance is already running, exit and error message
     if (GameIsAlreadyRunning() == TRUE)
@@ -58,7 +72,8 @@ int WinMain(HINSTANCE Instance, HINSTANCE PrevInstance,
     {
         goto Exit;
     }
-
+    QueryPerformanceFrequency((LARGE_INTEGER*)&g_PerformanceData.PerformanceFrequency);
+    //Only needs to be called once, Frequency is set on boot of pc
     g_BackBuffer.Bitmapinfo.bmiHeader.biSize = sizeof(g_BackBuffer.Bitmapinfo.bmiHeader);
     
     g_BackBuffer.Bitmapinfo.bmiHeader.biWidth = GAME_RES_WIDTH;
@@ -76,10 +91,13 @@ int WinMain(HINSTANCE Instance, HINSTANCE PrevInstance,
     g_BackBuffer.Memory = VirtualAlloc(NULL, GAME_DRAWING_AREA_MEMORY_SIZE, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
     if (g_BackBuffer.Memory == NULL)
     {
-        MessageBox(NULL, "Failed to allocate memory for drawing surface!", "Error!", MB_ICONEXCLAMATION | MB_OK);
+        MessageBoxA(NULL, "Failed to allocate memory for drawing surface!", "Error!", MB_ICONEXCLAMATION | MB_OK);
 
         goto Exit;
     }
+
+    //Setting all the virtual alloc memory to white
+    memset(g_BackBuffer.Memory, 0.5f, GAME_DRAWING_AREA_MEMORY_SIZE);
     //Message loop to send info to .exe
 
     MSG Message = { 0 }; //a tag message from windows OS
@@ -89,6 +107,9 @@ int WinMain(HINSTANCE Instance, HINSTANCE PrevInstance,
     //This nested while loop should represent 1 frame
     while (g_GameIsRunning)
     {
+        //Starts timing the begining of a frame
+        QueryPerformanceCounter(&FrameStart);
+
         //Look up PeekMessage vs GetMessage
         while (PeekMessageA(&Message, g_GameWindow, 0, 0, PM_REMOVE))
         {
@@ -99,7 +120,35 @@ int WinMain(HINSTANCE Instance, HINSTANCE PrevInstance,
 
         RenderFrameGraphics();
 
+        QueryPerformanceCounter(&FrameEnd);
+        //End timing at end of frame
+        ElapsedMicroSecondsPerFrame =  FrameEnd - FrameStart;
+
+        ElapsedMicroSecondsPerFrame *= 1000000;
+
+        ElapsedMicroSecondsPerFrame /= g_PerformanceData.PerformanceFrequency;
+
         Sleep(1); //Temp solution, in order to reach 60fps each frame must complete within 16.66 ms. 
+
+        g_PerformanceData.TotalFramesRendered++;
+
+        ElapsedMicroSecondsPerFrameAccumulator += ElapsedMicroSecondsPerFrame;
+
+        if (g_PerformanceData.TotalFramesRendered % CALCULATE_AVG_FPS_EVERY_X_FRAMES == 0)
+        {
+
+            int64_t AverageMicroSecondsPerFrame = ElapsedMicroSecondsPerFrameAccumulator / CALCULATE_AVG_FPS_EVERY_X_FRAMES;
+            
+            char str[64] = { 0 };
+
+            _snprintf_s(str, _countof(str), _TRUNCATE, "Avg Milliseconds/Frame %02f\n", (AverageMicroSecondsPerFrame * 0.001f));
+
+            OutputDebugStringA(str);
+
+            ElapsedMicroSecondsPerFrameAccumulator = 0;
+
+        }
+    
     }
 
     ////Rudamentary message loop, should nest it done above
@@ -213,18 +262,20 @@ DWORD CreateMainGameWindow(void)
     WindowClass.lpszClassName = "GAME_WINDOWCLASS";
     //Long pointer to String for class name
 
+    //Temp solution to zoomed resolutions only works on windows 10, solved by enabling per monitor dpi
+    //SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
 
     //RegisterClassA(&WindowClass);
     //Registering Window Class with windows
     if (RegisterClassExA(&WindowClass) == 0)//Checks registry fail returns 0
     {
         Result = GetLastError();
-        MessageBox(NULL, "Window Registration Failed!", "Error!", MB_ICONEXCLAMATION | MB_OK);
+        MessageBoxA(NULL, "Window Registration Failed!", "Error!", MB_ICONEXCLAMATION | MB_OK);
         //Avoid Generic fail messages, use GetLastError for specific 
         goto Exit;
     }
 
-    g_GameWindow = CreateWindowExA(WS_EX_CLIENTEDGE, "GAME_WINDOWCLASS",
+    g_GameWindow = CreateWindowExA(0, "GAME_WINDOWCLASS",
         "This is the Title", //Window title
         WS_OVERLAPPEDWINDOW | WS_VISIBLE, //Window Style, WS_Overlapped could be 0
         CW_USEDEFAULT, CW_USEDEFAULT, 640, 480, //Window initialize position&size
@@ -234,7 +285,45 @@ DWORD CreateMainGameWindow(void)
     if (g_GameWindow == NULL)
     {
         Result = GetLastError();
-        MessageBox(NULL, "Window Creation Failed!", "Error!", MB_ICONEXCLAMATION | MB_OK);
+        MessageBoxA(NULL, "Window Creation Failed!", "Error!", MB_ICONEXCLAMATION | MB_OK);
+        goto Exit;
+    }
+    //This gets info about users monitor
+    g_PerformanceData.MonitorInfo.cbSize = sizeof(MONITORINFO);
+    if (GetMonitorInfoA(MonitorFromWindow(g_GameWindow, MONITOR_DEFAULTTOPRIMARY), &g_PerformanceData.MonitorInfo) == 0)
+    {
+        Result = ERROR_MONITOR_NO_DESCRIPTOR;
+
+        MessageBoxA(NULL, "Failed to collect monitor info!", "Error!", MB_ICONEXCLAMATION | MB_OK);
+
+        goto Exit;
+    }
+
+    //However, this returns a digital res after the scale is applied (Mine is 125%)
+    //Fixed by using SetProcessDPi
+    g_PerformanceData.MonitorWidth = g_PerformanceData.MonitorInfo.rcMonitor.right - g_PerformanceData.MonitorInfo.rcMonitor.left;
+
+    g_PerformanceData.MonitorHeight = g_PerformanceData.MonitorInfo.rcMonitor.bottom - g_PerformanceData.MonitorInfo.rcMonitor.top;
+
+    //Applies certain properties to window, still leaves white pixels change clientedge flag on CreateWindow
+    if (SetWindowLongPtrA(g_GameWindow, GWL_STYLE, (WS_OVERLAPPEDWINDOW | WS_VISIBLE) & ~WS_OVERLAPPEDWINDOW) == 0)
+    {
+        Result = GetLastError();
+
+        goto Exit;
+    }
+
+    //Sets window to fullscreen,borderless but leaves a small pixel bar on left
+    if (SetWindowPos(g_GameWindow, 
+        HWND_TOP, 
+        g_PerformanceData.MonitorInfo.rcMonitor.left,
+        g_PerformanceData.MonitorInfo.rcMonitor.top,
+        g_PerformanceData.MonitorWidth,
+        g_PerformanceData.MonitorHeight, 
+        SWP_FRAMECHANGED | SWP_FRAMECHANGED) == 0)
+    {
+        Result = GetLastError();
+
         goto Exit;
     }
     //ShowWindow(WindowHandle, TRUE); //shouldnt be necessary
@@ -261,13 +350,13 @@ BOOL GameIsAlreadyRunning(void)
     }
 }
 
-void ProcessPlayerInput() 
+void ProcessPlayerInput(void) 
 {
-    short EscapeKeyDown = GetAsyncKeyState(VK_ESCAPE);
+    int16_t EscapeKeyDown = GetAsyncKeyState(VK_ESCAPE);
     //This Checks if the player is in focus 
     if (EscapeKeyDown && (GetForegroundWindow() == (g_GameWindow)))
     {
-        OutputDebugString("In focus");
+        
         SendMessageA(g_GameWindow, WM_CLOSE, 0, 0);
     }
 
@@ -280,11 +369,43 @@ void ProcessPlayerInput()
 
 void RenderFrameGraphics(void)
 {
+    ////Painting backbuffer all white, because memset does all bits
+    //memset(g_BackBuffer.Memory, 0xff, GAME_DRAWING_AREA_MEMORY_SIZE);
+    
+    PIXEL32 Pixel = { 0 };
+
+    Pixel.Blue = 0x7f;
+
+    Pixel.Green = 0;
+
+    Pixel.Red = 0;
+
+    Pixel.Alpha = 0xff;
+
+    //Paints half of backbuffer to Pixel value
+    for (int x = 0; x < GAME_RES_HEIGHT*GAME_RES_WIDTH / 2; x++)
+    {
+        //By casting to PIXER32 Ptr it knows to go 4 pixels wide. (32bits)
+        memcpy_s((PIXEL32*)g_BackBuffer.Memory + x, sizeof(Pixel), &Pixel, sizeof(PIXEL32));
+
+    }
+    
     //Get Device Context and remember to release it when finished
     HDC DeviceContext = GetDC(g_GameWindow);
 
     //Placing the backbuffer ontop of window with reference to device context and address of backbuffer.
-    StretchDIBits(DeviceContext, 0, 0, 100, 100, 0, 0, 100, 100, g_BackBuffer.Memory, &g_BackBuffer.Bitmapinfo, DIB_RGB_COLORS, SRCCOPY);
+    StretchDIBits(DeviceContext, 
+        0, 
+        0,
+        g_PerformanceData.MonitorWidth,
+        g_PerformanceData.MonitorHeight,
+        0,
+        0,
+        GAME_RES_WIDTH,
+        GAME_RES_HEIGHT,
+        g_BackBuffer.Memory,
+        &g_BackBuffer.Bitmapinfo,
+        DIB_RGB_COLORS, SRCCOPY);
 
     ReleaseDC(g_GameWindow, DeviceContext);
 }
