@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <windows.h>
 #include <emmintrin.h>
+#include <Psapi.h>
 #pragma warning(pop)
 //Then after including windows.h, pop previous W3 back to Wall
 
@@ -165,7 +166,7 @@ int WINAPI WinMain(HINSTANCE Instance, HINSTANCE PrevInstance,
         ElapsedMicroSecondsPerFrameAccumulatorRaw += ElapsedMicroSeconds;
 
         //While FPS is below target, reroute the thread to sleep less
-        while (ElapsedMicroSeconds <= (int64_t)TARGET_MICROSECONDS_PER_FRAME)
+        while (ElapsedMicroSeconds < (int64_t)TARGET_MICROSECONDS_PER_FRAME)
         {
             ElapsedMicroSeconds = FrameEnd - FrameStart;
 
@@ -176,7 +177,7 @@ int WINAPI WinMain(HINSTANCE Instance, HINSTANCE PrevInstance,
             QueryPerformanceCounter((LARGE_INTEGER*)&FrameEnd);
 
             //While there is enough time for frame to sleep the minimum cycle without wasting time
-            if (ElapsedMicroSeconds < ((int64_t)TARGET_MICROSECONDS_PER_FRAME - (g_PerformanceData.CurrentTimerResolution*0.1f)))
+            if (ElapsedMicroSeconds < ((int64_t)TARGET_MICROSECONDS_PER_FRAME - ((g_PerformanceData.CurrentTimerResolution*0.1f))))
             {
                 Sleep(1); //Could be anywhere from 1ms to a full system timer tick
             }
@@ -187,10 +188,13 @@ int WINAPI WinMain(HINSTANCE Instance, HINSTANCE PrevInstance,
 
         ElapsedMicroSecondsPerFrameAccumulatorCooked += ElapsedMicroSeconds;
 
+        //Calculate Debugg info
         if (g_PerformanceData.TotalFramesRendered % CALCULATE_AVG_FPS_EVERY_X_FRAMES == 0)
-        {
+        {            
+            //Remember **Process Handle is not the same as Module Handle**
+            GetProcessHandleCount(GetCurrentProcess(), &g_PerformanceData.HandleCount);
 
-
+            K32GetProcessMemoryInfo(GetCurrentProcess(), (PROCESS_MEMORY_COUNTERS*)&g_PerformanceData.Meminfo, sizeof(g_PerformanceData.Meminfo));
             
             g_PerformanceData.RawFPSAvg = (1.0f / ((ElapsedMicroSecondsPerFrameAccumulatorRaw / CALCULATE_AVG_FPS_EVERY_X_FRAMES) * 0.000001));
 
@@ -567,6 +571,14 @@ void RenderFrameGraphics(void)
         sprintf_s(DebugTextBuffer, sizeof(DebugTextBuffer), "Current Timer Res: %0.2f", g_PerformanceData.CurrentTimerResolution/10000.0f);
 
         TextOutA(DeviceContext, 0, 52, DebugTextBuffer, (int)strlen(DebugTextBuffer));
+
+        sprintf_s(DebugTextBuffer, sizeof(DebugTextBuffer), "Handles: %lu", g_PerformanceData.HandleCount);
+
+        TextOutA(DeviceContext, 0, 65, DebugTextBuffer, (int)strlen(DebugTextBuffer));
+
+        sprintf_s(DebugTextBuffer, sizeof(DebugTextBuffer), "Memory: %lu", g_PerformanceData.Meminfo.PrivateUsage);
+
+        TextOutA(DeviceContext, 0, 78, DebugTextBuffer, (int)strlen(DebugTextBuffer));
     }
 
     ReleaseDC(g_GameWindow, DeviceContext);

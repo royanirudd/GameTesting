@@ -13,7 +13,7 @@
 //Each frame is going to occupy this much memory
 #define GAME_DRAWING_AREA_MEMORY_SIZE (GAME_RES_WIDTH * GAME_RES_HEIGHT * (GAME_BPP/8))
 
-#define CALCULATE_AVG_FPS_EVERY_X_FRAMES 100
+#define CALCULATE_AVG_FPS_EVERY_X_FRAMES 120
 
 #define TARGET_MICROSECONDS_PER_FRAME 16667 //60 FPS target
 
@@ -64,11 +64,15 @@ typedef struct GAME_PERFORMANCE_DATA
 
 	BOOL  DisplayDebugInfo;
 
-	LONG MinimumTimerResolution;
+	uint32_t MinimumTimerResolution;
 
-	LONG MaximumTimerResolution;
+	uint32_t MaximumTimerResolution;
 
-	LONG CurrentTimerResolution;
+	uint32_t CurrentTimerResolution;
+
+	DWORD HandleCount;
+
+	PROCESS_MEMORY_COUNTERS_EX Meminfo;
 
 }GAME_PERFORMANCE_DATA;
 
