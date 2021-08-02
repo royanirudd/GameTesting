@@ -25,10 +25,21 @@ C:\Program Files (x86)\Windows Kits\10\Include\10.0.19041.0\um\winioctl.h(15525,
 C:\Program Files (x86)\Windows Kits\10\Include\10.0.19041.0\um\winioctl.h(15675,22): warning C4668: '_WIN32_WINNT_WIN10_RS4' is not defined as a preprocessor macro, replacing with '0' for '#if/#elif'
 C:\Program Files (x86)\Windows Kits\10\Include\10.0.19041.0\um\winioctl.h(15688,22): warning C4668: '_WIN32_WINNT_WIN10_RS4' is not defined as a preprocessor macro, replacing with '0' for '#if/#elif'
 C:\Program Files (x86)\Windows Kits\10\Include\10.0.19041.0\um\winioctl.h(15916,22): warning C4668: '_WIN32_WINNT_WIN10_RS1' is not defined as a preprocessor macro, replacing with '0' for '#if/#elif'
-C:\Users\aniru\source\repos\GameTesting\Main.c(25,23): warning C4100: 'Instance': unreferenced formal parameter
+C:\Users\aniru\source\repos\GameTesting\Main.c(81,69): warning C4057: 'function': 'PULONG' differs in indirection to slightly different base types from 'LONG *'
+C:\Users\aniru\source\repos\GameTesting\Main.c(81,112): warning C4057: 'function': 'PULONG' differs in indirection to slightly different base types from 'LONG *'
+C:\Users\aniru\source\repos\GameTesting\Main.c(81,155): warning C4057: 'function': 'PULONG' differs in indirection to slightly different base types from 'LONG *'
+C:\Users\aniru\source\repos\GameTesting\Main.c(190,143): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+C:\Users\aniru\source\repos\GameTesting\Main.c(192,149): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+C:\Users\aniru\source\repos\GameTesting\Main.c(399,49): warning C4020: 'CreateMutexA': too many actual parameters
+C:\Users\aniru\source\repos\GameTesting\Main.c(539,58): warning C4133: 'function': incompatible types - from 'PIXEL32 *' to '__m128i *'
   Generating code
-  Previous IPDB and IOBJ mismatch, fall back to full compilation.
-C:\Users\aniru\source\repos\GameTesting\Main.c(37): warning C4711: function 'CreateMainGameWindow' selected for automatic inline expansion
-  All 3 functions were compiled because no usable IPDB/IOBJ from previous compilation was found.
+C:\Users\aniru\source\repos\GameTesting\Main.c(509): warning C4710: 'sprintf_s': function not inlined
+C:\Users\aniru\source\repos\GameTesting\Main.c(513): warning C4710: 'sprintf_s': function not inlined
+C:\Users\aniru\source\repos\GameTesting\Main.c(517): warning C4710: 'sprintf_s': function not inlined
+C:\Users\aniru\source\repos\GameTesting\Main.c(521): warning C4710: 'sprintf_s': function not inlined
+C:\Users\aniru\source\repos\GameTesting\Main.c(525): warning C4710: 'sprintf_s': function not inlined
+  1 of 10 functions (10.0%) were compiled, the rest were copied from previous compilation.
+    0 functions were new in current compilation
+    1 functions had inline decision re-evaluated but remain unchanged
   Finished generating code
   GameTesting.vcxproj -> C:\Users\aniru\source\repos\GameTesting\Release\GameTesting.exe

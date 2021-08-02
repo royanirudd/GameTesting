@@ -25,7 +25,16 @@ C:\Program Files (x86)\Windows Kits\10\Include\10.0.19041.0\um\winioctl.h(15525,
 C:\Program Files (x86)\Windows Kits\10\Include\10.0.19041.0\um\winioctl.h(15675,22): warning C4668: '_WIN32_WINNT_WIN10_RS4' is not defined as a preprocessor macro, replacing with '0' for '#if/#elif'
 C:\Program Files (x86)\Windows Kits\10\Include\10.0.19041.0\um\winioctl.h(15688,22): warning C4668: '_WIN32_WINNT_WIN10_RS4' is not defined as a preprocessor macro, replacing with '0' for '#if/#elif'
 C:\Program Files (x86)\Windows Kits\10\Include\10.0.19041.0\um\winioctl.h(15916,22): warning C4668: '_WIN32_WINNT_WIN10_RS1' is not defined as a preprocessor macro, replacing with '0' for '#if/#elif'
-C:\Users\aniru\source\repos\GameTesting\Main.c(164,143): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-C:\Users\aniru\source\repos\GameTesting\Main.c(166,149): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-C:\Users\aniru\source\repos\GameTesting\Main.c(373,49): warning C4020: 'CreateMutexA': too many actual parameters
+C:\Users\aniru\source\repos\GameTesting\Main.h(31,14): warning C4820: 'GAMEBITMAP': '4' bytes padding added after data member 'Bitmapinfo'
+C:\Users\aniru\source\repos\GameTesting\Main.c(83,69): warning C4057: 'function': 'PULONG' differs in indirection to slightly different base types from 'LONG *'
+C:\Users\aniru\source\repos\GameTesting\Main.c(83,112): warning C4057: 'function': 'PULONG' differs in indirection to slightly different base types from 'LONG *'
+C:\Users\aniru\source\repos\GameTesting\Main.c(83,155): warning C4057: 'function': 'PULONG' differs in indirection to slightly different base types from 'LONG *'
+C:\Users\aniru\source\repos\GameTesting\Main.c(195,143): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+C:\Users\aniru\source\repos\GameTesting\Main.c(197,149): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+C:\Users\aniru\source\repos\GameTesting\Main.c(404,49): warning C4020: 'CreateMutexA': too many actual parameters
+C:\Users\aniru\source\repos\GameTesting\Main.c(423,71): warning C4047: 'function': 'int' differs in levels of indirection from 'char [2]'
+C:\Users\aniru\source\repos\GameTesting\Main.c(423,68): warning C4024: 'GetAsyncKeyState': different types for formal and actual parameter 1
+C:\Users\aniru\source\repos\GameTesting\Main.c(424,75): warning C4047: 'function': 'int' differs in levels of indirection from 'char [2]'
+C:\Users\aniru\source\repos\GameTesting\Main.c(424,72): warning C4024: 'GetAsyncKeyState': different types for formal and actual parameter 1
+C:\Users\aniru\source\repos\GameTesting\Main.c(581,58): warning C4133: 'function': incompatible types - from 'PIXEL32 *' to '__m128i *'
   GameTesting.vcxproj -> C:\Users\aniru\source\repos\GameTesting\Debug\GameTesting.exe

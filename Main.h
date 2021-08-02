@@ -1,7 +1,6 @@
 #pragma once
 //This is a input guard, so if another main.h it is only included once
 
-
 #define GAME_NAME "Game_Name"
 //Defining these to match the output type in Bitmapinfo struct
 
@@ -18,23 +17,12 @@
 
 #define TARGET_MICROSECONDS_PER_FRAME 16667 //60 FPS target
 
-LRESULT CALLBACK MainWindowProc(_In_ HWND WindowHandle, _In_ UINT Message, _In_ WPARAM WParam, _In_ LPARAM LParam);
-//Prototype for Window Process
+#define SIMD
 
-DWORD CreateMainGameWindow(void);
-//Prototype for Creating Window Func
-//_In_ is SAL2 tells compiler how you intend to use the function.
-//_In_ means intended to be an input variable
+typedef LONG(NTAPI* _NtQueryTimerResolution) (OUT PULONG MinimumResolution, OUT PULONG MaximumResolution, OUT PULONG CurrentResolution);
 
-BOOL GameIsAlreadyRunning(void);
+_NtQueryTimerResolution NtQueryTimerResolution;
 
-void RenderFrameGraphics(void); //Can return void but never fails
-
-void ProcessPlayerInput(void); //can return void because assume it doesnt fail, dont care about error code
-
-
-#pragma warning(disable: 4820) //Disabled structure padding warning 
-#pragma warning(disable: 5045) //Disabled warning about Spectre/Meltdown CPU vulnarability
 //Struct for background bitmap
 typedef struct GAMEBITMAP
 {
@@ -46,7 +34,7 @@ typedef struct GAMEBITMAP
 } GAMEBITMAP;
 
 //Struct for 32bit Pixel, each 8 bit unsigned char for color.
-typedef struct PIXEL32 
+typedef struct PIXEL32
 {
 	uint8_t Blue;
 
@@ -60,7 +48,7 @@ typedef struct PIXEL32
 
 typedef struct GAME_PERFORMANCE_DATA
 {
-	uint64_t TotalFramesRendered; 
+	uint64_t TotalFramesRendered;
 
 	float RawFPSAvg;
 
@@ -76,4 +64,44 @@ typedef struct GAME_PERFORMANCE_DATA
 
 	BOOL  DisplayDebugInfo;
 
+	LONG MinimumTimerResolution;
+
+	LONG MaximumTimerResolution;
+
+	LONG CurrentTimerResolution;
+
 }GAME_PERFORMANCE_DATA;
+
+typedef struct PLAYER
+{
+	char Name[12];
+	int32_t WorldPosx;
+	int32_t WorldPosy;
+	int32_t HP;
+	int32_t Strength;
+	int32_t MP;
+
+} PLAYER;
+
+LRESULT CALLBACK MainWindowProc(_In_ HWND WindowHandle, _In_ UINT Message, _In_ WPARAM WParam, _In_ LPARAM LParam);
+//Prototype for Window Process
+
+DWORD CreateMainGameWindow(void);
+//Prototype for Creating Window Func
+//_In_ is SAL2 tells compiler how you intend to use the function.
+//_In_ means intended to be an input variable
+
+BOOL GameIsAlreadyRunning(void);
+
+void RenderFrameGraphics(void); //Can return void but never fails
+
+void ProcessPlayerInput(void); //can return void because assume it doesnt fail, dont care about error code
+#ifdef SIMD
+void ClearScreen(_In_ __m128i* Color);
+#else
+void ClearScreen(_In_ PIXEL32* Color);
+#endif
+
+#pragma warning(disable: 4820) //Disabled structure padding warning 
+#pragma warning(disable: 5045) //Disabled warning about Spectre/Meltdown CPU vulnarability
+

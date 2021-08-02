@@ -6,6 +6,7 @@
 #pragma warning(push, 3)
 #include <stdio.h>
 #include <windows.h>
+#include <emmintrin.h>
 #pragma warning(pop)
 //Then after including windows.h, pop previous W3 back to Wall
 
@@ -22,8 +23,9 @@ BOOL g_GameIsRunning; //g_ for it is a global var
 GAMEBITMAP g_BackBuffer = { 0 };
 
 GAME_PERFORMANCE_DATA g_PerformanceData;
-//Windows API requires structs to be initilized with size parameter
 
+PLAYER g_Player;
+//Windows API requires structs to be initilized with size parameter
 
 //void* Memory; //64 bits in x64
 
@@ -56,12 +58,29 @@ int WINAPI WinMain(HINSTANCE Instance, HINSTANCE PrevInstance,
 
     int64_t FrameEnd = 0;
 
-    int64_t ElapsedMicroSecondsPerFrame = 0;
+    int64_t ElapsedMicroSeconds = 0;
 
     int64_t ElapsedMicroSecondsPerFrameAccumulatorRaw = 0;
 
     int64_t ElapsedMicroSecondsPerFrameAccumulatorCooked = 0;
+    //Finding and importing a function from nt.dll
+    HMODULE NtDllModuleHandle;
 
+    if ((NtDllModuleHandle = GetModuleHandleA("ntdll.dll")) == NULL) 
+    {
+        MessageBoxA(NULL, "Couldn't load ntdll.dll", "Error!", MB_ICONEXCLAMATION | MB_OK);
+        goto Exit;
+    }
+
+    if ((NtQueryTimerResolution = (_NtQueryTimerResolution)GetProcAddress(NtDllModuleHandle,
+        "NtQueryTimerResolution")) == NULL)
+    {
+        MessageBoxA(NULL, "Couldn't find the NtQueryTimerResolution function in ntdll.dll", "Error!", MB_ICONEXCLAMATION | MB_OK);
+        goto Exit;
+    }
+
+    //Calling the NtQuery imported from ntdll.dll
+    NtQueryTimerResolution(&g_PerformanceData.MinimumTimerResolution, &g_PerformanceData.MaximumTimerResolution, &g_PerformanceData.CurrentTimerResolution);
 
     //If 1 instance is already running, exit and error message
     if (GameIsAlreadyRunning() == TRUE)
@@ -78,6 +97,7 @@ int WINAPI WinMain(HINSTANCE Instance, HINSTANCE PrevInstance,
     }
     QueryPerformanceFrequency((LARGE_INTEGER*)&g_PerformanceData.PerformanceFrequency);
     //Only needs to be called once, Frequency is set on boot of pc
+    g_PerformanceData.DisplayDebugInfo = TRUE;
 
     g_BackBuffer.Bitmapinfo.bmiHeader.biSize = sizeof(g_BackBuffer.Bitmapinfo.bmiHeader);
     
@@ -94,7 +114,7 @@ int WINAPI WinMain(HINSTANCE Instance, HINSTANCE PrevInstance,
 
     //Allocating memory for drawing surface assigned to Memory pointer.
     g_BackBuffer.Memory = VirtualAlloc(NULL, GAME_DRAWING_AREA_MEMORY_SIZE, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
-    
+    //No need to free memory, Windows should cleanup all resources on exit
     
     if (g_BackBuffer.Memory == NULL)
     {
@@ -105,6 +125,13 @@ int WINAPI WinMain(HINSTANCE Instance, HINSTANCE PrevInstance,
 
     //Setting all the virtual alloc memory to white
     memset(g_BackBuffer.Memory, 0, GAME_DRAWING_AREA_MEMORY_SIZE);
+
+    //NtQueryTimerResolution
+
+    g_Player.WorldPosx = 25;
+
+    g_Player.WorldPosy = 25;
+
     //Message loop to send info to .exe
 
     g_GameIsRunning = TRUE;
@@ -127,34 +154,38 @@ int WINAPI WinMain(HINSTANCE Instance, HINSTANCE PrevInstance,
 
         QueryPerformanceCounter((LARGE_INTEGER*)&FrameEnd);
         //End timing at end of frame
-        ElapsedMicroSecondsPerFrame =  FrameEnd - FrameStart;
+        ElapsedMicroSeconds =  FrameEnd - FrameStart;
 
-        ElapsedMicroSecondsPerFrame *= 1000000;
+        ElapsedMicroSeconds *= 1000000;
 
-        ElapsedMicroSecondsPerFrame /= g_PerformanceData.PerformanceFrequency;
+        ElapsedMicroSeconds /= g_PerformanceData.PerformanceFrequency;
 
         g_PerformanceData.TotalFramesRendered++;
 
-        ElapsedMicroSecondsPerFrameAccumulatorRaw += ElapsedMicroSecondsPerFrame;
+        ElapsedMicroSecondsPerFrameAccumulatorRaw += ElapsedMicroSeconds;
 
         //While FPS is below target, reroute the thread to sleep less
-        while (ElapsedMicroSecondsPerFrame <= TARGET_MICROSECONDS_PER_FRAME)
+        while (ElapsedMicroSeconds <= (int64_t)TARGET_MICROSECONDS_PER_FRAME)
         {
-            Sleep(0); //Could be anywhere from 1ms to a full system timer tick
+            ElapsedMicroSeconds = FrameEnd - FrameStart;
 
-           
+            ElapsedMicroSeconds *= 1000000;
 
-            ElapsedMicroSecondsPerFrame = FrameEnd - FrameStart;
-
-            ElapsedMicroSecondsPerFrame *= 1000000;
-
-            ElapsedMicroSecondsPerFrame /= g_PerformanceData.PerformanceFrequency;
+            ElapsedMicroSeconds /= g_PerformanceData.PerformanceFrequency;
 
             QueryPerformanceCounter((LARGE_INTEGER*)&FrameEnd);
+
+            //While there is enough time for frame to sleep the minimum cycle without wasting time
+            if (ElapsedMicroSeconds < ((int64_t)TARGET_MICROSECONDS_PER_FRAME - (g_PerformanceData.CurrentTimerResolution*0.1f)))
+            {
+                Sleep(1); //Could be anywhere from 1ms to a full system timer tick
+            }
+            
+            
         }
         //Sleep(1); //Temp solution, in order to reach 60fps each frame must complete within 16.66 ms. 
 
-        ElapsedMicroSecondsPerFrameAccumulatorCooked += ElapsedMicroSecondsPerFrame;
+        ElapsedMicroSecondsPerFrameAccumulatorCooked += ElapsedMicroSeconds;
 
         if (g_PerformanceData.TotalFramesRendered % CALCULATE_AVG_FPS_EVERY_X_FRAMES == 0)
         {
@@ -386,13 +417,16 @@ BOOL GameIsAlreadyRunning(void)
 void ProcessPlayerInput(void) 
 {
     int16_t EscapeKeyDown = GetAsyncKeyState(VK_ESCAPE);
-
     int16_t DebugKeyDown = GetAsyncKeyState(VK_F1);
-    //This Checks if the player is in focus 
-
+    int16_t LeftKeyDown = GetAsyncKeyState(VK_LEFT) | GetAsyncKeyState('A');
+    int16_t RightKeyDown = GetAsyncKeyState(VK_RIGHT) | GetAsyncKeyState('D');
+    int16_t UpKeyDown = GetAsyncKeyState(VK_UP) | GetAsyncKeyState("W");
+    int16_t DownKeyDown = GetAsyncKeyState(VK_DOWN) | GetAsyncKeyState("S");
     //This makes sure it doesnt spam when holding down key, holds value of last frame
     static int16_t DebugKeyWasDown;
-
+  /*  static int16_t LeftKeyWasDown;
+    static int16_t RightKeyWasDown;*/
+    //This Checks if the player is in focus
     if (GetForegroundWindow() == g_GameWindow)
     {
         if (EscapeKeyDown)
@@ -403,6 +437,35 @@ void ProcessPlayerInput(void)
         if (DebugKeyDown && !DebugKeyWasDown)
         {
             g_PerformanceData.DisplayDebugInfo = !g_PerformanceData.DisplayDebugInfo;
+        }
+        if (LeftKeyDown)
+        {
+            if (g_Player.WorldPosx > 0 )
+            {
+                g_Player.WorldPosx--;
+            }
+        }
+        if (RightKeyDown)
+        {
+            if (g_Player.WorldPosx < (GAME_RES_WIDTH -16))
+            {
+                g_Player.WorldPosx++;
+            }
+        }
+        if (DownKeyDown)
+        {
+            if (g_Player.WorldPosy < (GAME_RES_HEIGHT - 16))
+            {
+                g_Player.WorldPosy++;
+            }
+            
+        }
+        if (UpKeyDown)
+        {
+            if (g_Player.WorldPosy > 0)
+            {
+                g_Player.WorldPosy--;
+            }
         }
         //Reset after frame
         DebugKeyWasDown = DebugKeyDown;
@@ -421,38 +484,44 @@ void RenderFrameGraphics(void)
     ////Painting backbuffer all white, because memset does all bits
     //memset(g_BackBuffer.Memory, 0xff, GAME_DRAWING_AREA_MEMORY_SIZE);
     
-    PIXEL32 Pixel = { 0 };
+    
+    //Array of 4 Pixels, 4x32bits = 128, same as PIXEL32 Quadpixel[4]
+    
+#ifdef SIMD
+    __m128i QuadPixel = { 0x7f, 0x00, 0x00, 0xff, 0x7f, 0x00, 0x00, 0xff,
+     0x7f, 0x00, 0x00, 0xff , 0x7f, 0x00, 0x00, 0xff };
+    ClearScreen(&QuadPixel);
+    
+#else
+    PIXEL32 Pixel = { 0x7f, 0x00, 0x00, 0xff };
 
-    Pixel.Blue = 0x7f;
-
-    Pixel.Green = 0;
-
-    Pixel.Red = 0;
-
-    Pixel.Alpha = 0xff;
-
+    ClearScreen(&Pixel);
+#endif
     //Paints half of backbuffer to Pixel value
-    for (int x = 0; x < GAME_RES_HEIGHT*GAME_RES_WIDTH/2; x++)
+    /*for (int x = 0; x < GAME_RES_HEIGHT*GAME_RES_WIDTH; x++)
     {
-        //By casting to PIXER32 Ptr it knows to go 4 pixels wide. (32bits)
+        
+        By casting to PIXER32 Ptr it knows to go 4 pixels wide. (32bits)
         memcpy_s((PIXEL32*)g_BackBuffer.Memory + x, sizeof(Pixel), &Pixel, sizeof(PIXEL32));
 
-    }
+    }*/
     //Making coordinate system for back buffer
-    int32_t ScreenX = 25;
+    int32_t ScreenX = g_Player.WorldPosx;
 
-    int32_t ScreenY = 25;
+    int32_t ScreenY = g_Player.WorldPosy;
 
     int32_t StartingScreenPixel = ((GAME_RES_WIDTH * GAME_RES_HEIGHT) - GAME_RES_WIDTH) - \
         (GAME_RES_WIDTH * ScreenY) + ScreenX;
 
+    //Through the use of intrinsics, we can lay down more than one at a time
+    //Drawing a white box 16x16 pixels
     for (int32_t y=0; y<16; y++)
     {
         for (int32_t x=0; x<16; x++)
         {
             memset((PIXEL32*)g_BackBuffer.Memory + (uintptr_t)StartingScreenPixel + x - ((uintptr_t)GAME_RES_WIDTH * y),
                 0xFF,
-                sizeof(Pixel));
+                sizeof(PIXEL32));
         }
     }
 
@@ -479,14 +548,46 @@ void RenderFrameGraphics(void)
 
         char DebugTextBuffer[64] = { 0 };
 
-        sprintf_s(DebugTextBuffer, sizeof(DebugTextBuffer), "FPS Raw:    %0.1f", g_PerformanceData.RawFPSAvg);
+        sprintf_s(DebugTextBuffer, sizeof(DebugTextBuffer), "FPS Raw:       %0.1f", g_PerformanceData.RawFPSAvg);
 
         TextOutA(DeviceContext, 0, 0, DebugTextBuffer, (int)strlen(DebugTextBuffer));
 
-        sprintf_s(DebugTextBuffer, sizeof(DebugTextBuffer), "FPS Cooked: %0.1f", g_PerformanceData.CookedFPSAvg);
+        sprintf_s(DebugTextBuffer, sizeof(DebugTextBuffer), "FPS Cooked:    %0.1f", g_PerformanceData.CookedFPSAvg);
 
         TextOutA(DeviceContext, 0, 13, DebugTextBuffer, (int)strlen(DebugTextBuffer));
+
+        sprintf_s(DebugTextBuffer, sizeof(DebugTextBuffer), "Min Timer Res: %0.2f", g_PerformanceData.MinimumTimerResolution/10000.0f);
+
+        TextOutA(DeviceContext, 0, 26, DebugTextBuffer, (int)strlen(DebugTextBuffer));
+
+        sprintf_s(DebugTextBuffer, sizeof(DebugTextBuffer), "Max Timer Res: %0.2f", g_PerformanceData.MaximumTimerResolution/10000.0f);
+
+        TextOutA(DeviceContext, 0, 39, DebugTextBuffer, (int)strlen(DebugTextBuffer));
+
+        sprintf_s(DebugTextBuffer, sizeof(DebugTextBuffer), "Current Timer Res: %0.2f", g_PerformanceData.CurrentTimerResolution/10000.0f);
+
+        TextOutA(DeviceContext, 0, 52, DebugTextBuffer, (int)strlen(DebugTextBuffer));
     }
 
     ReleaseDC(g_GameWindow, DeviceContext);
 }
+#ifdef SIMD
+//Function to clear whole screen to given color and forcing it to inline
+__forceinline void ClearScreen(_In_ __m128i* Color)
+{
+    for (int x = 0; x < GAME_RES_HEIGHT*GAME_RES_WIDTH; x += 4)
+    {
+        //using SIMD, does it 4 times as fast
+        _mm_store_si128((PIXEL32*)g_BackBuffer.Memory + x, *Color);
+    }
+}
+
+#else
+__forceinline void ClearScreen(_In_ PIXEL32* Pixel)
+{
+    for (int x = 0; x < GAME_RES_WIDTH * GAME_RES_HEIGHT; x++)
+    {
+        memcpy((PIXEL32*)g_BackBuffer.Memory + x, Pixel, sizeof(PIXEL32));
+    }
+}
+#endif
