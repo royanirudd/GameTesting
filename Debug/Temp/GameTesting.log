@@ -25,8 +25,7 @@ C:\Program Files (x86)\Windows Kits\10\Include\10.0.19041.0\um\winioctl.h(15525,
 C:\Program Files (x86)\Windows Kits\10\Include\10.0.19041.0\um\winioctl.h(15675,22): warning C4668: '_WIN32_WINNT_WIN10_RS4' is not defined as a preprocessor macro, replacing with '0' for '#if/#elif'
 C:\Program Files (x86)\Windows Kits\10\Include\10.0.19041.0\um\winioctl.h(15688,22): warning C4668: '_WIN32_WINNT_WIN10_RS4' is not defined as a preprocessor macro, replacing with '0' for '#if/#elif'
 C:\Program Files (x86)\Windows Kits\10\Include\10.0.19041.0\um\winioctl.h(15916,22): warning C4668: '_WIN32_WINNT_WIN10_RS1' is not defined as a preprocessor macro, replacing with '0' for '#if/#elif'
-C:\Users\aniru\source\repos\GameTesting\Main.c(100,37): warning C4244: 'function': conversion from 'float' to 'int', possible loss of data
-C:\Users\aniru\source\repos\GameTesting\Main.c(111,44): warning C4133: 'function': incompatible types - from 'int64_t *' to 'LARGE_INTEGER *'
-C:\Users\aniru\source\repos\GameTesting\Main.c(123,42): warning C4133: 'function': incompatible types - from 'int64_t *' to 'LARGE_INTEGER *'
-C:\Users\aniru\source\repos\GameTesting\Main.c(340,49): warning C4020: 'CreateMutexA': too many actual parameters
+C:\Users\aniru\source\repos\GameTesting\Main.c(164,143): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+C:\Users\aniru\source\repos\GameTesting\Main.c(166,149): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+C:\Users\aniru\source\repos\GameTesting\Main.c(373,49): warning C4020: 'CreateMutexA': too many actual parameters
   GameTesting.vcxproj -> C:\Users\aniru\source\repos\GameTesting\Debug\GameTesting.exe

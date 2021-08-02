@@ -1,9 +1,10 @@
 //http://www.winprog.org/tutorial/window_click.html
 
-#include <stdio.h>
+
 //These pragma are directly communicating to compiler
 //Adjusts warning level, make them to 0(or whatever) just for, then include windows.h
-#pragma warning(push, 0)
+#pragma warning(push, 3)
+#include <stdio.h>
 #include <windows.h>
 #pragma warning(pop)
 //Then after including windows.h, pop previous W3 back to Wall
@@ -37,11 +38,9 @@ GAME_PERFORMANCE_DATA g_PerformanceData;
 //LNK errors are linker errors, means the linker cant find the function
 
 
-int WinMain(HINSTANCE Instance, HINSTANCE PrevInstance,
+int WINAPI WinMain(HINSTANCE Instance, HINSTANCE PrevInstance,
     PSTR CommandLine, int CmdShow)
 {
-
-    
 
     //UNREFERENCED_PARAMETER means we know we are not using those arguements
 
@@ -51,13 +50,18 @@ int WinMain(HINSTANCE Instance, HINSTANCE PrevInstance,
     UNREFERENCED_PARAMETER(CommandLine);
     UNREFERENCED_PARAMETER(CmdShow);
 
+    MSG Message = { 0 }; //a tag message from windows OS
+
     int64_t FrameStart = 0;
 
     int64_t FrameEnd = 0;
 
     int64_t ElapsedMicroSecondsPerFrame = 0;
 
-    int64_t ElapsedMicroSecondsPerFrameAccumulator = 0;
+    int64_t ElapsedMicroSecondsPerFrameAccumulatorRaw = 0;
+
+    int64_t ElapsedMicroSecondsPerFrameAccumulatorCooked = 0;
+
 
     //If 1 instance is already running, exit and error message
     if (GameIsAlreadyRunning() == TRUE)
@@ -74,6 +78,7 @@ int WinMain(HINSTANCE Instance, HINSTANCE PrevInstance,
     }
     QueryPerformanceFrequency((LARGE_INTEGER*)&g_PerformanceData.PerformanceFrequency);
     //Only needs to be called once, Frequency is set on boot of pc
+
     g_BackBuffer.Bitmapinfo.bmiHeader.biSize = sizeof(g_BackBuffer.Bitmapinfo.bmiHeader);
     
     g_BackBuffer.Bitmapinfo.bmiHeader.biWidth = GAME_RES_WIDTH;
@@ -89,6 +94,8 @@ int WinMain(HINSTANCE Instance, HINSTANCE PrevInstance,
 
     //Allocating memory for drawing surface assigned to Memory pointer.
     g_BackBuffer.Memory = VirtualAlloc(NULL, GAME_DRAWING_AREA_MEMORY_SIZE, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+    
+    
     if (g_BackBuffer.Memory == NULL)
     {
         MessageBoxA(NULL, "Failed to allocate memory for drawing surface!", "Error!", MB_ICONEXCLAMATION | MB_OK);
@@ -97,10 +104,8 @@ int WinMain(HINSTANCE Instance, HINSTANCE PrevInstance,
     }
 
     //Setting all the virtual alloc memory to white
-    memset(g_BackBuffer.Memory, 0.5f, GAME_DRAWING_AREA_MEMORY_SIZE);
+    memset(g_BackBuffer.Memory, 0, GAME_DRAWING_AREA_MEMORY_SIZE);
     //Message loop to send info to .exe
-
-    MSG Message = { 0 }; //a tag message from windows OS
 
     g_GameIsRunning = TRUE;
 
@@ -108,7 +113,7 @@ int WinMain(HINSTANCE Instance, HINSTANCE PrevInstance,
     while (g_GameIsRunning)
     {
         //Starts timing the begining of a frame
-        QueryPerformanceCounter(&FrameStart);
+        QueryPerformanceCounter((LARGE_INTEGER*)&FrameStart);
 
         //Look up PeekMessage vs GetMessage
         while (PeekMessageA(&Message, g_GameWindow, 0, 0, PM_REMOVE))
@@ -120,7 +125,7 @@ int WinMain(HINSTANCE Instance, HINSTANCE PrevInstance,
 
         RenderFrameGraphics();
 
-        QueryPerformanceCounter(&FrameEnd);
+        QueryPerformanceCounter((LARGE_INTEGER*)&FrameEnd);
         //End timing at end of frame
         ElapsedMicroSecondsPerFrame =  FrameEnd - FrameStart;
 
@@ -128,24 +133,52 @@ int WinMain(HINSTANCE Instance, HINSTANCE PrevInstance,
 
         ElapsedMicroSecondsPerFrame /= g_PerformanceData.PerformanceFrequency;
 
-        Sleep(1); //Temp solution, in order to reach 60fps each frame must complete within 16.66 ms. 
-
         g_PerformanceData.TotalFramesRendered++;
 
-        ElapsedMicroSecondsPerFrameAccumulator += ElapsedMicroSecondsPerFrame;
+        ElapsedMicroSecondsPerFrameAccumulatorRaw += ElapsedMicroSecondsPerFrame;
+
+        //While FPS is below target, reroute the thread to sleep less
+        while (ElapsedMicroSecondsPerFrame <= TARGET_MICROSECONDS_PER_FRAME)
+        {
+            Sleep(0); //Could be anywhere from 1ms to a full system timer tick
+
+           
+
+            ElapsedMicroSecondsPerFrame = FrameEnd - FrameStart;
+
+            ElapsedMicroSecondsPerFrame *= 1000000;
+
+            ElapsedMicroSecondsPerFrame /= g_PerformanceData.PerformanceFrequency;
+
+            QueryPerformanceCounter((LARGE_INTEGER*)&FrameEnd);
+        }
+        //Sleep(1); //Temp solution, in order to reach 60fps each frame must complete within 16.66 ms. 
+
+        ElapsedMicroSecondsPerFrameAccumulatorCooked += ElapsedMicroSecondsPerFrame;
 
         if (g_PerformanceData.TotalFramesRendered % CALCULATE_AVG_FPS_EVERY_X_FRAMES == 0)
         {
 
-            int64_t AverageMicroSecondsPerFrame = ElapsedMicroSecondsPerFrameAccumulator / CALCULATE_AVG_FPS_EVERY_X_FRAMES;
+
             
-            char str[64] = { 0 };
+            g_PerformanceData.RawFPSAvg = (1.0f / ((ElapsedMicroSecondsPerFrameAccumulatorRaw / CALCULATE_AVG_FPS_EVERY_X_FRAMES) * 0.000001));
 
-            _snprintf_s(str, _countof(str), _TRUNCATE, "Avg Milliseconds/Frame %02f\n", (AverageMicroSecondsPerFrame * 0.001f));
+            g_PerformanceData.CookedFPSAvg = (1.0f / ((ElapsedMicroSecondsPerFrameAccumulatorCooked / CALCULATE_AVG_FPS_EVERY_X_FRAMES) * 0.000001));
 
-            OutputDebugStringA(str);
+            //This is Debug stats on console output
+           /* char FrameStats[128] = { 0 };
 
-            ElapsedMicroSecondsPerFrameAccumulator = 0;
+            _snprintf_s(FrameStats, _countof(FrameStats), _TRUNCATE,
+                "Avg Microseconds/Frame raw %llu\tAvg FPS Cooked: %01f\tAvg FPS Raw%01f\n",
+                AverageMicroSecondsPerFrameCooked,
+                g_PerformanceData.CookedFPSAvg,
+                1.0f/ ((ElapsedMicroSecondsPerFrameAccumulatorRaw/60)* 0.000001));
+
+            OutputDebugStringA(FrameStats);*/
+
+            ElapsedMicroSecondsPerFrameAccumulatorRaw = 0;
+
+            ElapsedMicroSecondsPerFrameAccumulatorCooked = 0;
 
         }
     
@@ -353,12 +386,28 @@ BOOL GameIsAlreadyRunning(void)
 void ProcessPlayerInput(void) 
 {
     int16_t EscapeKeyDown = GetAsyncKeyState(VK_ESCAPE);
+
+    int16_t DebugKeyDown = GetAsyncKeyState(VK_F1);
     //This Checks if the player is in focus 
-    if (EscapeKeyDown && (GetForegroundWindow() == (g_GameWindow)))
+
+    //This makes sure it doesnt spam when holding down key, holds value of last frame
+    static int16_t DebugKeyWasDown;
+
+    if (GetForegroundWindow() == g_GameWindow)
     {
-        
-        SendMessageA(g_GameWindow, WM_CLOSE, 0, 0);
+        if (EscapeKeyDown)
+        {
+            SendMessageA(g_GameWindow, WM_CLOSE, 0, 0);
+        }
+
+        if (DebugKeyDown && !DebugKeyWasDown)
+        {
+            g_PerformanceData.DisplayDebugInfo = !g_PerformanceData.DisplayDebugInfo;
+        }
+        //Reset after frame
+        DebugKeyWasDown = DebugKeyDown;
     }
+    
 
     //Debug Statements to see when window is in focus
     /*if (GetForegroundWindow() == g_GameWindow)
@@ -383,13 +432,30 @@ void RenderFrameGraphics(void)
     Pixel.Alpha = 0xff;
 
     //Paints half of backbuffer to Pixel value
-    for (int x = 0; x < GAME_RES_HEIGHT*GAME_RES_WIDTH / 2; x++)
+    for (int x = 0; x < GAME_RES_HEIGHT*GAME_RES_WIDTH/2; x++)
     {
         //By casting to PIXER32 Ptr it knows to go 4 pixels wide. (32bits)
         memcpy_s((PIXEL32*)g_BackBuffer.Memory + x, sizeof(Pixel), &Pixel, sizeof(PIXEL32));
 
     }
-    
+    //Making coordinate system for back buffer
+    int32_t ScreenX = 25;
+
+    int32_t ScreenY = 25;
+
+    int32_t StartingScreenPixel = ((GAME_RES_WIDTH * GAME_RES_HEIGHT) - GAME_RES_WIDTH) - \
+        (GAME_RES_WIDTH * ScreenY) + ScreenX;
+
+    for (int32_t y=0; y<16; y++)
+    {
+        for (int32_t x=0; x<16; x++)
+        {
+            memset((PIXEL32*)g_BackBuffer.Memory + (uintptr_t)StartingScreenPixel + x - ((uintptr_t)GAME_RES_WIDTH * y),
+                0xFF,
+                sizeof(Pixel));
+        }
+    }
+
     //Get Device Context and remember to release it when finished
     HDC DeviceContext = GetDC(g_GameWindow);
 
@@ -406,6 +472,21 @@ void RenderFrameGraphics(void)
         g_BackBuffer.Memory,
         &g_BackBuffer.Bitmapinfo,
         DIB_RGB_COLORS, SRCCOPY);
+
+    if (g_PerformanceData.DisplayDebugInfo == TRUE)
+    {
+        SelectObject(DeviceContext, (HFONT)GetStockObject(ANSI_FIXED_FONT));
+
+        char DebugTextBuffer[64] = { 0 };
+
+        sprintf_s(DebugTextBuffer, sizeof(DebugTextBuffer), "FPS Raw:    %0.1f", g_PerformanceData.RawFPSAvg);
+
+        TextOutA(DeviceContext, 0, 0, DebugTextBuffer, (int)strlen(DebugTextBuffer));
+
+        sprintf_s(DebugTextBuffer, sizeof(DebugTextBuffer), "FPS Cooked: %0.1f", g_PerformanceData.CookedFPSAvg);
+
+        TextOutA(DeviceContext, 0, 13, DebugTextBuffer, (int)strlen(DebugTextBuffer));
+    }
 
     ReleaseDC(g_GameWindow, DeviceContext);
 }
