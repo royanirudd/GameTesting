@@ -19,6 +19,30 @@
 
 #define SIMD
 
+//Suits for player bitmap and walking will enumerate it later
+#define FACING_DOWN_0 0
+
+#define FACING_DOWN_1 1
+
+#define FACING_DOWN_2 2
+
+#define FACING_LEFT_0 3
+
+#define FACING_LEFT_1 4
+
+#define FACING_LEFT_2 5
+
+#define FACING_RIGHT_0 6
+
+#define FACING_RIGHT_1 7
+
+#define FACING_RIGHT_2 8
+
+#define FACING UP_0 9
+
+#define FACING_UP_1 10
+
+#define FACING_UP 2 11
 typedef LONG(NTAPI* _NtQueryTimerResolution) (OUT PULONG MinimumResolution, OUT PULONG MaximumResolution, OUT PULONG CurrentResolution);
 
 _NtQueryTimerResolution NtQueryTimerResolution;
@@ -84,16 +108,17 @@ typedef struct GAME_PERFORMANCE_DATA
 
 }GAME_PERFORMANCE_DATA;
 
-typedef struct PLAYER
+typedef struct HERO
 {
 	char Name[12];
+	GAMEBITMAP Sprite[12];
 	int32_t ScreenPosx;
 	int32_t ScreenPosy;
 	int32_t HP;
 	int32_t Strength;
 	int32_t MP;
 
-} PLAYER;
+} HERO;
 
 LRESULT CALLBACK MainWindowProc(_In_ HWND WindowHandle, _In_ UINT Message, _In_ WPARAM WParam, _In_ LPARAM LParam);
 //Prototype for Window Process
@@ -108,6 +133,11 @@ BOOL GameIsAlreadyRunning(void);
 void RenderFrameGraphics(void); //Can return void but never fails
 
 void ProcessPlayerInput(void); //can return void because assume it doesnt fail, dont care about error code
+
+DWORD Load32BppBitmapFromFile(_In_ char* FileName, _Inout_ GAMEBITMAP* GameBitmap);
+
+DWORD InitializeHero(void);
+
 #ifdef SIMD
 void ClearScreen(_In_ __m128i* Color);
 #else

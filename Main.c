@@ -28,7 +28,7 @@ GAMEBITMAP g_BackBuffer = { 0 };
 
 GAME_PERFORMANCE_DATA g_PerformanceData;
 
-PLAYER g_Player;
+HERO g_Player;
 
 BOOL g_WindowHasFocus = TRUE;
 //Windows API requires structs to be initilized with size parameter
@@ -46,8 +46,8 @@ BOOL g_WindowHasFocus = TRUE;
 //LNK errors are linker errors, means the linker cant find the function
 
 
-int WINAPI WinMain(HINSTANCE Instance, HINSTANCE PrevInstance,
-    PSTR CommandLine, int CmdShow)
+int WINAPI WinMain(_In_ HINSTANCE Instance, _In_opt_ HINSTANCE PrevInstance,
+    _In_ PSTR CommandLine, _In_ int CmdShow)
 {
 
     //UNREFERENCED_PARAMETER means we know we are not using those arguements
@@ -184,9 +184,12 @@ int WINAPI WinMain(HINSTANCE Instance, HINSTANCE PrevInstance,
 
     //NtQueryTimerResolution
 
-    g_Player.ScreenPosx = 25;
+    if (InitializeHero() != ERROR_SUCCESS)
+    {
+        MessageBoxA(NULL, "Failed to initialize hero!", "Error!", MB_ICONEXCLAMATION | MB_OK);
 
-    g_Player.ScreenPosy = 25;
+        goto Exit;
+    }
 
     //Message loop to send info to .exe
 
@@ -586,6 +589,7 @@ void ProcessPlayerInput(void)
         OutputDebugStringA("OUT FOCUS\n");*/
 }   
 
+
 void RenderFrameGraphics(void)
 {
     ////Painting backbuffer all white, because memset does all bits
@@ -711,3 +715,213 @@ __forceinline void ClearScreen(_In_ PIXEL32* Pixel)
     }
 }
 #endif
+
+//This function will open a file and populate a pointer to memory with that bitmap
+DWORD Load32BppBitmapFromFile(_In_ char* FileName, _Inout_ GAMEBITMAP* GameBitmap)
+{
+//    //Read into Bitmap Filetype for header info
+//    DWORD Error = ERROR_SUCCESS;
+//
+//    HANDLE FileHandle = INVALID_HANDLE_VALUE;
+//
+//    WORD BitmapHeader = 0; //unsigned short 16 bits
+//
+//    DWORD PixelDataOffset = 0; 
+//    //For the readfileEx, this will return pointer to number it could read
+//    DWORD NumberofBytesRead = 2;
+//
+//    //this function returns an open handle
+//    FileHandle = CreateFileA(FileName, GENERIC_READ, FILE_SHARE_READ,
+//        NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+//    if (FileHandle == INVALID_HANDLE_VALUE)
+//    {
+//        Error = GetLastError();
+//
+//        goto Exit;
+//    }
+//    //Want to read first few bytes of file to get header info
+//    
+//    if (ReadFile(FileHandle, &BitmapHeader, 2,&NumberofBytesRead,NULL) == 0)
+//    {
+//        Error = GetLastError();
+//        goto Exit;
+//    }
+//    
+//    //This is reading the first 2 and confirming it is a BM type
+//    if (BitmapHeader != 0x4D42) //this is "BM" backwards
+//    {
+//        Error = ERROR_FILE_INVALID;
+//        goto Exit;
+//    }
+//    //If i call readfile again, it will continue from where i left 
+//    //But i want to skip to 10 bytes from start of file
+//    if (SetFilePointer(FileHandle, 0xA, NULL, FILE_BEGIN) == INVALID_SET_FILE_POINTER)
+//    {
+//        Error = GetLastError();
+//        goto Exit;
+//    }
+//
+//    if (ReadFile(FileHandle, &PixelDataOffset, sizeof(DWORD), &NumberofBytesRead, NULL) == 0)
+//    {
+//        Error = GetLastError();
+//        goto Exit;
+//    }
+//
+//
+//    if (SetFilePointer(FileHandle, 0xE, NULL, FILE_BEGIN) == INVALID_SET_FILE_POINTER)
+//    {
+//        Error = GetLastError();
+//
+//        goto Exit;
+//    }
+//
+//    if (ReadFile(FileHandle, &GameBitmap->Bitmapinfo.bmiHeader, sizeof(BITMAPINFOHEADER), &NumberofBytesRead, NULL) == 0)
+//    {
+//        Error = GetLastError();
+//
+//        goto Exit;
+//    }
+//    //Trying different allocation methods
+//    //GameBitmap->Memory = VirtualAlloc(NULL, GameBitmap->Bitmapinfo.bmiHeader.biSizeImage, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+//    //(GameBitmap->Memory) =(void*) malloc(GameBitmap->Bitmapinfo.bmiHeader.biSizeImage);
+//    GameBitmap->Memory = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, GameBitmap->Bitmapinfo.bmiHeader.biSizeImage);
+//    
+//    if (GameBitmap->Memory == NULL)
+//    {
+//        Error = ERROR_NOT_ENOUGH_MEMORY;
+//        goto Exit;
+//    }
+//
+//    //memcpy_s(GameBitmap->Memory, GameBitmap->Bitmapinfo.bmiHeader.biSizeImage,  )
+//    //have to remove file cursor to begining of memory
+//
+//    if(SetFilePointer(FileHandle, PixelDataOffset, NULL, FILE_BEGIN) == INVALID_SET_FILE_POINTER)
+//        {
+//            Error = GetLastError();
+//            goto Exit;
+//        }
+//    
+//    if (ReadFile(FileHandle, &GameBitmap->Memory, GameBitmap->Bitmapinfo.bmiHeader.biSizeImage, &NumberofBytesRead, NULL) == 0)
+//    {
+//        Error = GetLastError();
+//        goto Exit;
+//    }
+//Exit:
+//
+//    if (FileHandle && (FileHandle != INVALID_HANDLE_VALUE))
+//    {
+//        //If the file is open and function is succeeded, close file upon exit
+//        CloseHandle(FileHandle);
+//    }
+//    
+//    return Error; //BIG ASS FAIL OVER HERE IGNORE THIS, WILL LOOKBACKLATER
+    DWORD Error = ERROR_SUCCESS;
+
+    HANDLE FileHandle = INVALID_HANDLE_VALUE;
+
+    WORD BitmapHeader = 0;
+
+    DWORD PixelDataOffset = 0;
+
+    DWORD NumberOfBytesRead = 2;
+
+    if ((FileHandle = CreateFileA(FileName, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL)) == INVALID_HANDLE_VALUE)
+    {
+        Error = GetLastError();
+
+        goto Exit;
+    }
+
+    if (ReadFile(FileHandle, &BitmapHeader, 2, &NumberOfBytesRead, NULL) == 0)
+    {
+        Error = GetLastError();
+
+        goto Exit;
+    }
+
+    if (BitmapHeader != 0x4d42) // "BM" backwards
+    {
+        Error = ERROR_FILE_INVALID;
+
+        goto Exit;
+    }
+
+    if (SetFilePointer(FileHandle, 0xA, NULL, FILE_BEGIN) == INVALID_SET_FILE_POINTER)
+    {
+        Error = GetLastError();
+
+        goto Exit;
+    }
+
+    if (ReadFile(FileHandle, &PixelDataOffset, sizeof(DWORD), &NumberOfBytesRead, NULL) == 0)
+    {
+        Error = GetLastError();
+
+        goto Exit;
+    }
+
+    if (SetFilePointer(FileHandle, 0xE, NULL, FILE_BEGIN) == INVALID_SET_FILE_POINTER)
+    {
+        Error = GetLastError();
+
+        goto Exit;
+    }
+
+    if (ReadFile(FileHandle, &GameBitmap->Bitmapinfo.bmiHeader, sizeof(BITMAPINFOHEADER), &NumberOfBytesRead, NULL) == 0)
+    {
+        Error = GetLastError();
+
+        goto Exit;
+    }
+
+    if ((GameBitmap->Memory = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, GameBitmap->Bitmapinfo.bmiHeader.biSizeImage)) == NULL)
+    {
+        Error = ERROR_NOT_ENOUGH_MEMORY;
+
+        goto Exit;
+    }
+
+    if (SetFilePointer(FileHandle, PixelDataOffset, NULL, FILE_BEGIN) == INVALID_SET_FILE_POINTER)
+    {
+        Error = GetLastError();
+
+        goto Exit;
+    }
+
+    if (ReadFile(FileHandle, GameBitmap->Memory, GameBitmap->Bitmapinfo.bmiHeader.biSizeImage, &NumberOfBytesRead, NULL) == 0)
+    {
+        Error = GetLastError();
+
+        goto Exit;
+    }
+
+Exit:
+
+    if (FileHandle && (FileHandle != INVALID_HANDLE_VALUE))
+    {
+        CloseHandle(FileHandle);
+    }
+
+    return(Error);
+}
+
+
+//Initializing hero character
+DWORD InitializeHero(void)
+{
+    DWORD Error = ERROR_SUCCESS;
+
+    g_Player.ScreenPosx = 25;
+
+    g_Player.ScreenPosy = 25;
+
+    if (Error = Load32BppBitmapFromFile("C:\\Users\\aniru\\source\\repos\\GameTesting\\Assets\\main_char.bmpx", &g_Player.Sprite[0]) != ERROR_SUCCESS)
+    {
+        MessageBoxA(NULL, "Couldn't load Bitmap Sprite!", "Error!", MB_ICONEXCLAMATION | MB_OK);
+
+        goto Exit;
+    }
+
+Exit:
+    return Error;
+}
