@@ -15,7 +15,7 @@
 
 #define CALCULATE_AVG_FPS_EVERY_X_FRAMES 120
 
-#define TARGET_MICROSECONDS_PER_FRAME 16667 //60 FPS target
+#define TARGET_MICROSECONDS_PER_FRAME 16667ULL //60 FPS target
 
 #define SIMD
 
@@ -74,13 +74,21 @@ typedef struct GAME_PERFORMANCE_DATA
 
 	PROCESS_MEMORY_COUNTERS_EX Meminfo;
 
+	SYSTEM_INFO SystemInfo;
+
+	int64_t CurrentSystemTime;
+
+	int64_t PreviousSystemTime;
+
+	double CPUPercent;
+
 }GAME_PERFORMANCE_DATA;
 
 typedef struct PLAYER
 {
 	char Name[12];
-	int32_t WorldPosx;
-	int32_t WorldPosy;
+	int32_t ScreenPosx;
+	int32_t ScreenPosy;
 	int32_t HP;
 	int32_t Strength;
 	int32_t MP;

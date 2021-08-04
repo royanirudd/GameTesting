@@ -8,12 +8,15 @@
 #include <windows.h>
 #include <emmintrin.h>
 #include <Psapi.h>
+
 #pragma warning(pop)
 //Then after including windows.h, pop previous W3 back to Wall
 
 #include <stdint.h>
 
 #include "Main.h"
+
+#pragma comment(lib, "Winmm.lib")
 //Prototypes in this header
 
 HWND g_GameWindow;
@@ -26,6 +29,8 @@ GAMEBITMAP g_BackBuffer = { 0 };
 GAME_PERFORMANCE_DATA g_PerformanceData;
 
 PLAYER g_Player;
+
+BOOL g_WindowHasFocus = TRUE;
 //Windows API requires structs to be initilized with size parameter
 
 //void* Memory; //64 bits in x64
@@ -61,11 +66,27 @@ int WINAPI WinMain(HINSTANCE Instance, HINSTANCE PrevInstance,
 
     int64_t ElapsedMicroSeconds = 0;
 
-    int64_t ElapsedMicroSecondsPerFrameAccumulatorRaw = 0;
+    int64_t ElapsedMicroSecondsAccumulatorRaw = 0;
 
-    int64_t ElapsedMicroSecondsPerFrameAccumulatorCooked = 0;
+    int64_t ElapsedMicroSecondsAccumulatorCooked = 0;
     //Finding and importing a function from nt.dll
-    HMODULE NtDllModuleHandle;
+    HMODULE NtDllModuleHandle = NULL;
+
+    FILETIME ProcessCreationTime = { 0 };
+
+    FILETIME ProcessExitTime = { 0 };
+
+    int64_t CurrentUserCPUTime = 0;
+
+    int64_t CurrentKernelCPUTime = 0;
+
+    int64_t PreviousUserCPUTime = 0;
+
+    int64_t  PrevousKernelCPUTime = 0;
+
+    HANDLE ProcessHandle = GetCurrentProcess();
+
+    HANDLE ThreadHandle = GetCurrentThread();
 
     if ((NtDllModuleHandle = GetModuleHandleA("ntdll.dll")) == NULL) 
     {
@@ -83,10 +104,44 @@ int WINAPI WinMain(HINSTANCE Instance, HINSTANCE PrevInstance,
     //Calling the NtQuery imported from ntdll.dll
     NtQueryTimerResolution(&g_PerformanceData.MinimumTimerResolution, &g_PerformanceData.MaximumTimerResolution, &g_PerformanceData.CurrentTimerResolution);
 
+    //No return value, therefore cant fail
+    GetSystemInfo(&g_PerformanceData.SystemInfo);
+
+    GetSystemTimeAsFileTime((FILETIME*)&g_PerformanceData.PreviousSystemTime);
+
+
     //If 1 instance is already running, exit and error message
     if (GameIsAlreadyRunning() == TRUE)
     {
         MessageBoxA(NULL, "Another instance of this program is already running!", "Error!", MB_ICONEXCLAMATION | MB_OK);
+
+        goto Exit;
+    }
+
+    //This only returns TIMERR_NOCANDO if it is not 1ms
+    //This sets the timer to 1 only for lifetime of game, no need to cleanup on exit
+    //from winmm.lib, this doesnt work all the time forsome reason. idk it works for now
+    if (timeBeginPeriod(1) == TIMERR_NOCANDO)
+    {
+        MessageBoxA(NULL, "Failed to set global timer resolution!", "Error!", MB_ICONEXCLAMATION | MB_OK);
+
+        goto Exit;
+    }
+
+    //Process doesnt run any code, just hold the threads
+    //Sets priority high, realtime is high but can cause important threads to not work
+    if (SetPriorityClass(ProcessHandle, HIGH_PRIORITY_CLASS) == 0)
+    {
+        MessageBoxA(NULL, "Failed to set process priority!", "Error!", MB_ICONEXCLAMATION | MB_OK);
+
+        goto Exit;
+    }
+
+    //Threads are the containers that run the code
+    // This sets process priority to high as well
+    if (SetThreadPriority(ThreadHandle, THREAD_PRIORITY_HIGHEST) == 0)
+    {
+        MessageBoxA(NULL, "Failed to set thread priority!", "Error!", MB_ICONEXCLAMATION | MB_OK);
 
         goto Exit;
     }
@@ -129,9 +184,9 @@ int WINAPI WinMain(HINSTANCE Instance, HINSTANCE PrevInstance,
 
     //NtQueryTimerResolution
 
-    g_Player.WorldPosx = 25;
+    g_Player.ScreenPosx = 25;
 
-    g_Player.WorldPosy = 25;
+    g_Player.ScreenPosy = 25;
 
     //Message loop to send info to .exe
 
@@ -163,7 +218,7 @@ int WINAPI WinMain(HINSTANCE Instance, HINSTANCE PrevInstance,
 
         g_PerformanceData.TotalFramesRendered++;
 
-        ElapsedMicroSecondsPerFrameAccumulatorRaw += ElapsedMicroSeconds;
+        ElapsedMicroSecondsAccumulatorRaw += ElapsedMicroSeconds;
 
         //While FPS is below target, reroute the thread to sleep less
         while (ElapsedMicroSeconds < (int64_t)TARGET_MICROSECONDS_PER_FRAME)
@@ -177,7 +232,8 @@ int WINAPI WinMain(HINSTANCE Instance, HINSTANCE PrevInstance,
             QueryPerformanceCounter((LARGE_INTEGER*)&FrameEnd);
 
             //While there is enough time for frame to sleep the minimum cycle without wasting time
-            if (ElapsedMicroSeconds < ((int64_t)TARGET_MICROSECONDS_PER_FRAME - ((g_PerformanceData.CurrentTimerResolution*0.1f))))
+            //this says if we are less than 75% through frame then sleep otherwise dont
+            if (ElapsedMicroSeconds < (TARGET_MICROSECONDS_PER_FRAME *0.75f))
             {
                 Sleep(1); //Could be anywhere from 1ms to a full system timer tick
             }
@@ -186,19 +242,38 @@ int WINAPI WinMain(HINSTANCE Instance, HINSTANCE PrevInstance,
         }
         //Sleep(1); //Temp solution, in order to reach 60fps each frame must complete within 16.66 ms. 
 
-        ElapsedMicroSecondsPerFrameAccumulatorCooked += ElapsedMicroSeconds;
+        ElapsedMicroSecondsAccumulatorCooked += ElapsedMicroSeconds;
 
-        //Calculate Debugg info
+        //Calculate Debugg info every CALCULATE_FPS_EVERY_X_Frames
         if (g_PerformanceData.TotalFramesRendered % CALCULATE_AVG_FPS_EVERY_X_FRAMES == 0)
-        {            
-            //Remember **Process Handle is not the same as Module Handle**
-            GetProcessHandleCount(GetCurrentProcess(), &g_PerformanceData.HandleCount);
+        {           
+            GetSystemTimeAsFileTime((FILETIME*)&g_PerformanceData.CurrentSystemTime);
 
-            K32GetProcessMemoryInfo(GetCurrentProcess(), (PROCESS_MEMORY_COUNTERS*)&g_PerformanceData.Meminfo, sizeof(g_PerformanceData.Meminfo));
+            GetProcessTimes(ProcessHandle, &ProcessCreationTime,
+                &ProcessExitTime,
+                (FILETIME*)&CurrentKernelCPUTime,
+                (FILETIME*)&CurrentUserCPUTime);
+
+
+            g_PerformanceData.CPUPercent = (CurrentKernelCPUTime - PrevousKernelCPUTime) +\
+                (CurrentUserCPUTime - PreviousUserCPUTime);
             
-            g_PerformanceData.RawFPSAvg = (1.0f / ((ElapsedMicroSecondsPerFrameAccumulatorRaw / CALCULATE_AVG_FPS_EVERY_X_FRAMES) * 0.000001));
+            g_PerformanceData.CPUPercent /= (g_PerformanceData.CurrentSystemTime - g_PerformanceData.PreviousSystemTime);
+            
+            g_PerformanceData.CPUPercent /= g_PerformanceData.SystemInfo.dwNumberOfProcessors;
 
-            g_PerformanceData.CookedFPSAvg = (1.0f / ((ElapsedMicroSecondsPerFrameAccumulatorCooked / CALCULATE_AVG_FPS_EVERY_X_FRAMES) * 0.000001));
+            g_PerformanceData.CPUPercent *= 100;
+            
+       
+            //Remember **Process Handle is not the same as Module Handle**
+            GetProcessHandleCount(ProcessHandle, &g_PerformanceData.HandleCount);
+
+
+            K32GetProcessMemoryInfo(ProcessHandle, (PROCESS_MEMORY_COUNTERS*)&g_PerformanceData.Meminfo, sizeof(g_PerformanceData.Meminfo));
+            
+            g_PerformanceData.RawFPSAvg = (1.0f / ((ElapsedMicroSecondsAccumulatorRaw / CALCULATE_AVG_FPS_EVERY_X_FRAMES) * 0.000001));
+
+            g_PerformanceData.CookedFPSAvg = (1.0f / ((ElapsedMicroSecondsAccumulatorCooked / CALCULATE_AVG_FPS_EVERY_X_FRAMES) * 0.000001));
 
             //This is Debug stats on console output
            /* char FrameStats[128] = { 0 };
@@ -211,10 +286,14 @@ int WINAPI WinMain(HINSTANCE Instance, HINSTANCE PrevInstance,
 
             OutputDebugStringA(FrameStats);*/
 
-            ElapsedMicroSecondsPerFrameAccumulatorRaw = 0;
+            ElapsedMicroSecondsAccumulatorRaw = 0;
 
-            ElapsedMicroSecondsPerFrameAccumulatorCooked = 0;
+            ElapsedMicroSecondsAccumulatorCooked = 0;
 
+            PrevousKernelCPUTime = CurrentKernelCPUTime;
+            PreviousUserCPUTime = CurrentKernelCPUTime;
+            g_PerformanceData.PreviousSystemTime = g_PerformanceData.CurrentSystemTime;
+            
         }
     
     }
@@ -259,6 +338,24 @@ LRESULT CALLBACK MainWindowProc(_In_ HWND WindowHandle, _In_ UINT Message, _In_ 
 
             PostQuitMessage(0); 
             //This makes GetMessageA return 0, hence stop the message loop and program.
+
+            break;
+        }
+
+        case WM_ACTIVATE:
+        {
+            if (WParam == 0)
+            {
+                //Our Window has lost focus
+                g_WindowHasFocus = FALSE;
+            }
+            else
+            {
+                //Our window gained focus
+                ShowCursor(FALSE);
+
+                g_WindowHasFocus = TRUE;
+            }
 
             break;
         }
@@ -420,6 +517,12 @@ BOOL GameIsAlreadyRunning(void)
 
 void ProcessPlayerInput(void) 
 {
+    //Dont process input if window is not on focus
+    if (g_WindowHasFocus == FALSE)
+    {
+        return;
+    }
+
     int16_t EscapeKeyDown = GetAsyncKeyState(VK_ESCAPE);
     int16_t DebugKeyDown = GetAsyncKeyState(VK_F1);
     int16_t LeftKeyDown = GetAsyncKeyState(VK_LEFT) | GetAsyncKeyState('A');
@@ -430,50 +533,50 @@ void ProcessPlayerInput(void)
     static int16_t DebugKeyWasDown;
   /*  static int16_t LeftKeyWasDown;
     static int16_t RightKeyWasDown;*/
-    //This Checks if the player is in focus
-    if (GetForegroundWindow() == g_GameWindow)
-    {
-        if (EscapeKeyDown)
-        {
-            SendMessageA(g_GameWindow, WM_CLOSE, 0, 0);
-        }
 
-        if (DebugKeyDown && !DebugKeyWasDown)
-        {
-            g_PerformanceData.DisplayDebugInfo = !g_PerformanceData.DisplayDebugInfo;
-        }
-        if (LeftKeyDown)
-        {
-            if (g_Player.WorldPosx > 0 )
-            {
-                g_Player.WorldPosx--;
-            }
-        }
-        if (RightKeyDown)
-        {
-            if (g_Player.WorldPosx < (GAME_RES_WIDTH -16))
-            {
-                g_Player.WorldPosx++;
-            }
-        }
-        if (DownKeyDown)
-        {
-            if (g_Player.WorldPosy < (GAME_RES_HEIGHT - 16))
-            {
-                g_Player.WorldPosy++;
-            }
-            
-        }
-        if (UpKeyDown)
-        {
-            if (g_Player.WorldPosy > 0)
-            {
-                g_Player.WorldPosy--;
-            }
-        }
-        //Reset after frame
-        DebugKeyWasDown = DebugKeyDown;
+    //This Checks if the player is in focus
+    //This now becomes redundant as we only process input when in focus
+    //if (g_WindowHasFocus)
+    if (EscapeKeyDown)
+    {
+        SendMessageA(g_GameWindow, WM_CLOSE, 0, 0);
     }
+
+    if (DebugKeyDown && !DebugKeyWasDown)
+    {
+        g_PerformanceData.DisplayDebugInfo = !g_PerformanceData.DisplayDebugInfo;
+    }
+    if (LeftKeyDown)
+    {
+        if (g_Player.ScreenPosx > 0 )
+        {
+            g_Player.ScreenPosx--;
+        }
+    }
+    if (RightKeyDown)
+    {
+        if (g_Player.ScreenPosx < (GAME_RES_WIDTH -16))
+        {
+            g_Player.ScreenPosx++;
+        }
+    }
+    if (DownKeyDown)
+    {
+        if (g_Player.ScreenPosy < (GAME_RES_HEIGHT - 16))
+        {
+            g_Player.ScreenPosy++;
+        }
+            
+    }
+    if (UpKeyDown)
+    {
+        if (g_Player.ScreenPosy > 0)
+        {
+            g_Player.ScreenPosy--;
+        }
+    }
+    //Reset after frame
+    DebugKeyWasDown = DebugKeyDown;
     
 
     //Debug Statements to see when window is in focus
@@ -510,9 +613,9 @@ void RenderFrameGraphics(void)
 
     }*/
     //Making coordinate system for back buffer
-    int32_t ScreenX = g_Player.WorldPosx;
+    int32_t ScreenX = g_Player.ScreenPosx;
 
-    int32_t ScreenY = g_Player.WorldPosy;
+    int32_t ScreenY = g_Player.ScreenPosy;
 
     int32_t StartingScreenPixel = ((GAME_RES_WIDTH * GAME_RES_HEIGHT) - GAME_RES_WIDTH) - \
         (GAME_RES_WIDTH * ScreenY) + ScreenX;
@@ -576,9 +679,14 @@ void RenderFrameGraphics(void)
 
         TextOutA(DeviceContext, 0, 65, DebugTextBuffer, (int)strlen(DebugTextBuffer));
 
-        sprintf_s(DebugTextBuffer, sizeof(DebugTextBuffer), "Memory: %lu", g_PerformanceData.Meminfo.PrivateUsage);
+        sprintf_s(DebugTextBuffer, sizeof(DebugTextBuffer), "Memory: %zu KB", g_PerformanceData.Meminfo.PrivateUsage / 1024);
 
         TextOutA(DeviceContext, 0, 78, DebugTextBuffer, (int)strlen(DebugTextBuffer));
+    
+        sprintf_s(DebugTextBuffer, sizeof(DebugTextBuffer), "CPU %.02f %%", g_PerformanceData.CPUPercent);
+
+        TextOutA(DeviceContext, 0, 91, DebugTextBuffer, (int)strlen(DebugTextBuffer));
+    
     }
 
     ReleaseDC(g_GameWindow, DeviceContext);
