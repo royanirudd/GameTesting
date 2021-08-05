@@ -40,6 +40,9 @@ C:\Users\aniru\source\repos\GameTesting\Main.c(533,71): warning C4047: 'function
 C:\Users\aniru\source\repos\GameTesting\Main.c(533,68): warning C4024: 'GetAsyncKeyState': different types for formal and actual parameter 1
 C:\Users\aniru\source\repos\GameTesting\Main.c(534,75): warning C4047: 'function': 'int' differs in levels of indirection from 'char [2]'
 C:\Users\aniru\source\repos\GameTesting\Main.c(534,72): warning C4024: 'GetAsyncKeyState': different types for formal and actual parameter 1
-C:\Users\aniru\source\repos\GameTesting\Main.c(705,58): warning C4133: 'function': incompatible types - from 'PIXEL32 *' to '__m128i *'
-C:\Users\aniru\source\repos\GameTesting\Main.c(918): warning C4706: assignment within conditional expression
+C:\Users\aniru\source\repos\GameTesting\Main.c(643,81): warning C4242: 'function': conversion from 'int32_t' to 'uint16_t', possible loss of data
+C:\Users\aniru\source\repos\GameTesting\Main.c(643,102): warning C4242: 'function': conversion from 'int32_t' to 'uint16_t', possible loss of data
+C:\Users\aniru\source\repos\GameTesting\Main.c(714,58): warning C4133: 'function': incompatible types - from 'PIXEL32 *' to '__m128i *'
+C:\Users\aniru\source\repos\GameTesting\Main.c(947,13): warning C4189: 'BackgroundPixel': local variable is initialized but not referenced
+C:\Users\aniru\source\repos\GameTesting\Main.c(927): warning C4706: assignment within conditional expression
   GameTesting.vcxproj -> C:\Users\aniru\source\repos\GameTesting\Debug\GameTesting.exe

@@ -25,33 +25,33 @@ C:\Program Files (x86)\Windows Kits\10\Include\10.0.19041.0\um\winioctl.h(15525,
 C:\Program Files (x86)\Windows Kits\10\Include\10.0.19041.0\um\winioctl.h(15675,22): warning C4668: '_WIN32_WINNT_WIN10_RS4' is not defined as a preprocessor macro, replacing with '0' for '#if/#elif'
 C:\Program Files (x86)\Windows Kits\10\Include\10.0.19041.0\um\winioctl.h(15688,22): warning C4668: '_WIN32_WINNT_WIN10_RS4' is not defined as a preprocessor macro, replacing with '0' for '#if/#elif'
 C:\Program Files (x86)\Windows Kits\10\Include\10.0.19041.0\um\winioctl.h(15916,22): warning C4668: '_WIN32_WINNT_WIN10_RS1' is not defined as a preprocessor macro, replacing with '0' for '#if/#elif'
-C:\Users\aniru\source\repos\GameTesting\Main.h(31,14): warning C4820: 'GAMEBITMAP': '4' bytes padding added after data member 'Bitmapinfo'
-C:\Users\aniru\source\repos\GameTesting\Main.h(75,36): warning C4820: 'GAME_PERFORMANCE_DATA': '4' bytes padding added after data member 'HandleCount'
-C:\Users\aniru\source\repos\GameTesting\Main.c(87,69): warning C4057: 'function': 'PULONG' differs in indirection to slightly different base types from 'uint32_t *'
-C:\Users\aniru\source\repos\GameTesting\Main.c(87,112): warning C4057: 'function': 'PULONG' differs in indirection to slightly different base types from 'uint32_t *'
-C:\Users\aniru\source\repos\GameTesting\Main.c(87,155): warning C4057: 'function': 'PULONG' differs in indirection to slightly different base types from 'uint32_t *'
-C:\Users\aniru\source\repos\GameTesting\Main.c(219,95): warning C4244: '=': conversion from 'int64_t' to 'double', possible loss of data
-C:\Users\aniru\source\repos\GameTesting\Main.c(233,135): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-C:\Users\aniru\source\repos\GameTesting\Main.c(235,141): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-C:\Users\aniru\source\repos\GameTesting\Main.c(446,49): warning C4020: 'CreateMutexA': too many actual parameters
-C:\Users\aniru\source\repos\GameTesting\Main.c(465,71): warning C4047: 'function': 'int' differs in levels of indirection from 'char [2]'
-C:\Users\aniru\source\repos\GameTesting\Main.c(465,68): warning C4024: 'GetAsyncKeyState': different types for formal and actual parameter 1
-C:\Users\aniru\source\repos\GameTesting\Main.c(466,75): warning C4047: 'function': 'int' differs in levels of indirection from 'char [2]'
-C:\Users\aniru\source\repos\GameTesting\Main.c(466,72): warning C4024: 'GetAsyncKeyState': different types for formal and actual parameter 1
-C:\Users\aniru\source\repos\GameTesting\Main.c(636,58): warning C4133: 'function': incompatible types - from 'PIXEL32 *' to '__m128i *'
+C:\Users\aniru\source\repos\GameTesting\Main.h(55,14): warning C4820: 'GAMEBITMAP': '4' bytes padding added after data member 'Bitmapinfo'
+C:\Users\aniru\source\repos\GameTesting\Main.h(99,36): warning C4820: 'GAME_PERFORMANCE_DATA': '4' bytes padding added after data member 'HandleCount'
+C:\Users\aniru\source\repos\GameTesting\Main.h(114,23): warning C4820: 'HERO': '4' bytes padding added after data member 'Name'
+C:\Users\aniru\source\repos\GameTesting\Main.h(121,1): warning C4820: 'HERO': '4' bytes padding added after data member 'MP'
+C:\Users\aniru\source\repos\GameTesting\Main.c(105,69): warning C4057: 'function': 'PULONG' differs in indirection to slightly different base types from 'uint32_t *'
+C:\Users\aniru\source\repos\GameTesting\Main.c(105,112): warning C4057: 'function': 'PULONG' differs in indirection to slightly different base types from 'uint32_t *'
+C:\Users\aniru\source\repos\GameTesting\Main.c(105,155): warning C4057: 'function': 'PULONG' differs in indirection to slightly different base types from 'uint32_t *'
+C:\Users\aniru\source\repos\GameTesting\Main.c(262,59): warning C4244: '=': conversion from 'int64_t' to 'double', possible loss of data
+C:\Users\aniru\source\repos\GameTesting\Main.c(277,135): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+C:\Users\aniru\source\repos\GameTesting\Main.c(279,141): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+C:\Users\aniru\source\repos\GameTesting\Main.c(508,49): warning C4020: 'CreateMutexA': too many actual parameters
+C:\Users\aniru\source\repos\GameTesting\Main.c(533,71): warning C4047: 'function': 'int' differs in levels of indirection from 'char [2]'
+C:\Users\aniru\source\repos\GameTesting\Main.c(533,68): warning C4024: 'GetAsyncKeyState': different types for formal and actual parameter 1
+C:\Users\aniru\source\repos\GameTesting\Main.c(534,75): warning C4047: 'function': 'int' differs in levels of indirection from 'char [2]'
+C:\Users\aniru\source\repos\GameTesting\Main.c(534,72): warning C4024: 'GetAsyncKeyState': different types for formal and actual parameter 1
+C:\Users\aniru\source\repos\GameTesting\Main.c(643,81): warning C4242: 'function': conversion from 'int32_t' to 'uint16_t', possible loss of data
+C:\Users\aniru\source\repos\GameTesting\Main.c(643,102): warning C4242: 'function': conversion from 'int32_t' to 'uint16_t', possible loss of data
+C:\Users\aniru\source\repos\GameTesting\Main.c(714,58): warning C4133: 'function': incompatible types - from 'PIXEL32 *' to '__m128i *'
+C:\Users\aniru\source\repos\GameTesting\Main.c(947,13): warning C4189: 'BackgroundPixel': local variable is initialized but not referenced
   Generating code
-C:\Users\aniru\source\repos\GameTesting\Main.c(593): warning C4710: 'sprintf_s': function not inlined
-C:\Users\aniru\source\repos\GameTesting\Main.c(597): warning C4710: 'sprintf_s': function not inlined
-C:\Users\aniru\source\repos\GameTesting\Main.c(601): warning C4710: 'sprintf_s': function not inlined
-C:\Users\aniru\source\repos\GameTesting\Main.c(605): warning C4710: 'sprintf_s': function not inlined
-C:\Users\aniru\source\repos\GameTesting\Main.c(609): warning C4710: 'sprintf_s': function not inlined
-C:\Users\aniru\source\repos\GameTesting\Main.c(613): warning C4710: 'sprintf_s': function not inlined
-C:\Users\aniru\source\repos\GameTesting\Main.c(617): warning C4710: 'sprintf_s': function not inlined
-C:\Users\aniru\source\repos\GameTesting\Main.c(621): warning C4710: 'sprintf_s': function not inlined
-C:\Users\aniru\source\repos\GameTesting\Main.c(95): warning C4711: function 'GameIsAlreadyRunning' selected for automatic inline expansion
-C:\Users\aniru\source\repos\GameTesting\Main.c(169): warning C4711: function 'ProcessPlayerInput' selected for automatic inline expansion
-  5 of 10 functions (50.0%) were compiled, the rest were copied from previous compilation.
-    0 functions were new in current compilation
+C:\Users\aniru\source\repos\GameTesting\Main.c(927): warning C4706: assignment within conditional expression
+C:\Users\aniru\source\repos\GameTesting\Main.c(643): warning C4711: function 'Blit32BppBitmapToBuffer' selected for automatic inline expansion
+C:\Users\aniru\source\repos\GameTesting\Main.c(114): warning C4711: function 'GameIsAlreadyRunning' selected for automatic inline expansion
+C:\Users\aniru\source\repos\GameTesting\Main.c(187): warning C4711: function 'InitializeHero' selected for automatic inline expansion
+C:\Users\aniru\source\repos\GameTesting\Main.c(210): warning C4711: function 'ProcessPlayerInput' selected for automatic inline expansion
+  9 of 14 functions (64.3%) were compiled, the rest were copied from previous compilation.
+    4 functions were new in current compilation
     0 functions had inline decision re-evaluated but remain unchanged
   Finished generating code
   GameTesting.vcxproj -> C:\Users\aniru\source\repos\GameTesting\Release\GameTesting.exe

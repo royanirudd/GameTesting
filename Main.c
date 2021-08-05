@@ -617,15 +617,17 @@ void RenderFrameGraphics(void)
 
     }*/
     //Making coordinate system for back buffer
-    int32_t ScreenX = g_Player.ScreenPosx;
+    //int32_t ScreenX = g_Player.ScreenPosx;
 
-    int32_t ScreenY = g_Player.ScreenPosy;
+    //int32_t ScreenY = g_Player.ScreenPosy;
 
+    /*
     int32_t StartingScreenPixel = ((GAME_RES_WIDTH * GAME_RES_HEIGHT) - GAME_RES_WIDTH) - \
         (GAME_RES_WIDTH * ScreenY) + ScreenX;
 
     //Through the use of intrinsics, we can lay down more than one at a time
     //Drawing a white box 16x16 pixels
+    //This should be reused to Blit Bitmap to buffer
     for (int32_t y=0; y<16; y++)
     {
         for (int32_t x=0; x<16; x++)
@@ -635,7 +637,13 @@ void RenderFrameGraphics(void)
                 sizeof(PIXEL32));
         }
     }
+    */
 
+    //This is the the blit to draw the player sprite
+    Blit32BppBitmapToBuffer(&g_Player.Sprite[FACING_DOWN_0], g_Player.ScreenPosx, g_Player.ScreenPosy);
+    
+    
+    
     //Get Device Context and remember to release it when finished
     HDC DeviceContext = GetDC(g_GameWindow);
 
@@ -653,6 +661,7 @@ void RenderFrameGraphics(void)
         &g_BackBuffer.Bitmapinfo,
         DIB_RGB_COLORS, SRCCOPY);
 
+    //Textout debug functions
     if (g_PerformanceData.DisplayDebugInfo == TRUE)
     {
         SelectObject(DeviceContext, (HFONT)GetStockObject(ANSI_FIXED_FONT));
@@ -915,7 +924,7 @@ DWORD InitializeHero(void)
 
     g_Player.ScreenPosy = 25;
 
-    if (Error = Load32BppBitmapFromFile("C:\\Users\\aniru\\source\\repos\\GameTesting\\Assets\\main_char.bmpx", &g_Player.Sprite[0]) != ERROR_SUCCESS)
+    if (Error = Load32BppBitmapFromFile("C:\\Users\\aniru\\source\\repos\\GameTesting\\Assets\\main_char2.bmpx", &g_Player.Sprite[FACING_DOWN_0]) != ERROR_SUCCESS)
     {
         MessageBoxA(NULL, "Couldn't load Bitmap Sprite!", "Error!", MB_ICONEXCLAMATION | MB_OK);
 
@@ -924,4 +933,38 @@ DWORD InitializeHero(void)
 
 Exit:
     return Error;
+}
+
+//Function should not fail, otherwise whole program should fail
+void Blit32BppBitmapToBuffer(_In_ GAMEBITMAP* GameBitmap, _In_ uint16_t x, _In_ uint16_t y)
+{
+    int32_t StartingScreenPixel = ((GAME_RES_WIDTH * GAME_RES_HEIGHT) - GAME_RES_WIDTH) - (GAME_RES_WIDTH * y) + x;
+    int32_t StartingBitmapPixel = ((GameBitmap->Bitmapinfo.bmiHeader.biWidth * GameBitmap->Bitmapinfo.bmiHeader.biHeight) - \
+        GameBitmap->Bitmapinfo.bmiHeader.biWidth);
+    int32_t MemoryOffset = 0;
+    int32_t BitmapOffset = 0;
+    PIXEL32 BitmapPixel = { 0 };
+    PIXEL32 BackgroundPixel = { 0 };
+
+    //Nested for loops for drawing the bitmap
+    //Why we dont use SIMD here, we dont get much benifit for small workloads
+    //Cant use SIMD becuz we know each individual pixel value will differ, it is not repetetive
+    for (int16_t YPixel = 0; YPixel < GameBitmap->Bitmapinfo.bmiHeader.biHeight; YPixel++)
+    {
+        for (int16_t XPixel = 0; XPixel < GameBitmap->Bitmapinfo.bmiHeader.biWidth; XPixel++)
+        {
+            MemoryOffset = StartingScreenPixel + XPixel - (GAME_RES_WIDTH * YPixel);
+            BitmapOffset = StartingBitmapPixel + XPixel - (GameBitmap->Bitmapinfo.bmiHeader.biWidth * YPixel);
+
+            //2 memcpy opperations to take the pixels off of bitmap
+            //and then place those pixels onto backbuffer
+            memcpy_s(&BitmapPixel, sizeof(PIXEL32), (PIXEL32*)GameBitmap->Memory +BitmapOffset, sizeof(PIXEL32));
+            //between these two memcpy we can do all other processing later
+            //for example we can skip memcpy for any pixels whose alpha is not 255
+            if (BitmapPixel.Alpha == 255)
+            {
+                memcpy_s((PIXEL32*)g_BackBuffer.Memory + MemoryOffset, sizeof(PIXEL32), &BitmapPixel, sizeof(PIXEL32));
+            }
+        }
+    }
 }
